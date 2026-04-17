@@ -39,6 +39,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
 .plog{margin-top:10px;padding:10px;background:var(--bgi);border:1px solid var(--brd);border-radius:6px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);max-height:150px;overflow-y:auto;line-height:1.6}.plog .ok{color:var(--gn)}.plog .warn{color:var(--am)}.plog .err{color:var(--rd)}.plog .info{color:var(--ac)}
 .score-c{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px}.score-ring{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;border:4px solid var(--brd)}.score-l{font-size:10px;color:var(--tm);text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{border-color:var(--rd);background:rgba(239,68,68,.08)}50%{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.02)}}
+.inp.missing{animation:blink 1.5s ease-in-out infinite;border-color:var(--rd)}
+.loading-overlay{position:fixed;inset:0;background:rgba(8,12,20,.85);z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading-overlay .spinner{width:40px;height:40px;border:3px solid var(--brd);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite}
+.loading-overlay .loading-text{font-size:14px;color:var(--t2);font-weight:500}
+.loading-overlay .loading-sub{font-size:11px;color:var(--tm)}
+@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:900px){.sidebar{position:fixed;left:0;top:0;bottom:0;z-index:200}.sidebar.collapsed{transform:translateX(-100%)}.ig{grid-template-columns:1fr 1fr}.rgrid{grid-template-columns:1fr}}
 @media(max-width:600px){.ig{grid-template-columns:1fr}.rgrid{grid-template-columns:1fr}}
 </style>
@@ -53,7 +60,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
 <button class="tgl" id="tglBtn" onclick="tglSB()" style="top:62px">◀</button>
 <div class="main">
 <div class="pbar" id="pBar"></div>
-<div class="mtabs"><button class="mtab on" data-mt="input" onclick="sTab('input')">📥 Veri Girişi</button><button class="mtab" data-mt="ratios" onclick="sTab('ratios')">📊 Rasyolar</button><button class="mtab" data-mt="compare" onclick="sTab('compare')">⚖️ Karşılaştırma</button><button class="mtab" data-mt="ai" onclick="sTab('ai')">🤖 AI Yorum</button></div>
+<div class="mtabs"><button class="mtab on" data-mt="input" onclick="sTab('input')">📥 Veri Girişi</button><button class="mtab" data-mt="ratios" onclick="sTab('ratios')">📊 Rasyolar</button><button class="mtab" data-mt="compare" onclick="sTab('compare')">⚖️ Karşılaştırma</button><button class="mtab" data-mt="ai" onclick="sTab('ai')">🤖 Uzman Yorum</button></div>
 <div class="cont" id="cont"></div>
 </div>
 </div>
@@ -236,33 +243,40 @@ function classifyExcel(wb){
     let tIdx=1;if(periods.length>=2)tIdx=periods[1].year>periods[0].year?1:0;
     const res=parseGT(raw,tIdx);return{data:res.data,log:[...log,...res.log]};
   }
-  log.push({t:'warn',m:'Format tanınamadı — Claude AI denenecek...'});
+  log.push({t:'warn',m:'Format tanınamadı — AI ile parse denenecek...'});
   return{data:eD(),log,needAI:true,rawText:raw.slice(0,80).map(r=>r.join(' | ')).join('\n')};
 }
 
-// PDF → CLAUDE AI
+// PDF → AI
 async function parsePDFAI(file){
-  const log=[{t:'info',m:'📄 PDF → Claude AI ile veri çıkarma...'}];
+  const log=[{t:'info',m:'📄 PDF algılandı — AI ile veri çıkarma başlıyor...'}];
   const buf=await file.arrayBuffer();const bytes=new Uint8Array(buf);let bin='';for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);const b64=btoa(bin);
   log.push({t:'info',m:`${(bytes.length/1024).toFixed(0)} KB → API'ye gönderiliyor...`});
   const fL=FIELDS.flatMap(s=>s.fields).map(f=>`"${f.key}":"${f.label}"`).join(',\n');
   try{
     const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:`Bu PDF bir Türk şirketinin finansal belgesidir. CARİ DÖNEM verilerini çıkar. Enflasyon düzeltmesi SONRASI sütun varsa onu tercih et.\n\nSADECE JSON:\n{${fL}}\n\nKRİTİK KURALLAR:\n- Tutarları BİNLİK AYIRICI OLMADAN düz sayı olarak yaz. Örnek: 495493963.13 (nokta ondalık ayracı)\n- 495.493.963,13 YAZMA, 495493963.13 YAZ\n- Giderleri pozitif yaz\n- Dipnottaki amortisman bilgisini depreciation alanına yaz\n- Bulunamayan alanları "" yap`}]}]})});
-    const res=await resp.json();const txt=res.content?.map(b=>b.text||'').join('')||'';
+    if(!resp.ok){log.push({t:'err',m:`Sunucu hatası: ${resp.status}`});return{data:eD(),log}}
+    const text=await resp.text();
+    let res;try{res=JSON.parse(text)}catch(e){log.push({t:'err',m:'API yanıtı okunamadı'});return{data:eD(),log}}
+    const txt=res.content?.map(b=>b.text||'').join('')||'';
     const jm=txt.match(/\{[\s\S]*\}/);
     if(jm){const p=JSON.parse(jm[0]);const data=eD();Object.keys(p).forEach(k=>{if(data.hasOwnProperty(k)&&p[k]){const n=parseTR(String(p[k]));if(!isNaN(n)&&n!==0)data[k]=String(n)}});
-    const filled=Object.values(data).filter(v=>v).length;log.push({t:'ok',m:`Claude AI ${filled} alan doldurdu`});
+    const filled=Object.values(data).filter(v=>v).length;log.push({t:'ok',m:`AI ${filled} alan başarıyla doldurdu`});
+    const empties=FIELDS.flatMap(s=>s.fields).filter(f=>!data[f.key]).map(f=>f.label);
+    if(empties.length)log.push({t:'warn',m:`Okunamayan alanlar: ${empties.join(', ')}`});
     const ta=pF(data.totalAssets),tl=pF(data.totalLiabilities),eq=pF(data.equity);
     if(ta>0)log.push(Math.abs(ta-(tl+eq))<ta*.02?{t:'ok',m:'Aktif≈Pasif ✓'}:{t:'warn',m:`Aktif-Pasif: ${fC(ta)} vs ${fC(tl+eq)}`});
     return{data,log}}
     log.push({t:'err',m:'JSON parse edilemedi'});return{data:eD(),log};
-  }catch(err){log.push({t:'err',m:'API: '+err.message});return{data:eD(),log}}
+  }catch(err){log.push({t:'err',m:'Bağlantı hatası: '+err.message});return{data:eD(),log}}
 }
 async function parseExcelAI(rawText){
-  const log=[{t:'info',m:'🤖 AI fallback parse...'}];const fL=FIELDS.flatMap(s=>s.fields).map(f=>`"${f.key}":"${f.label}"`).join(',\n');
+  const log=[{t:'info',m:'🤖 AI ile parse ediliyor...'}];const fL=FIELDS.flatMap(s=>s.fields).map(f=>`"${f.key}":"${f.label}"`).join(',\n');
   try{const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:`Türk şirketi finansal tablosu:\n${rawText}\n\nSADECE JSON:\n{${fL}}\nTutarlar düz sayı string.`}]})});
-  const res=await resp.json();const txt=res.content?.map(b=>b.text||'').join('')||'';const jm=txt.match(/\{[\s\S]*\}/);
-  if(jm){const p=JSON.parse(jm[0]);const data=eD();Object.keys(p).forEach(k=>{if(data.hasOwnProperty(k)&&p[k]){const n=parseTR(String(p[k]));if(!isNaN(n)&&n!==0)data[k]=String(n)}});log.push({t:'ok',m:`AI ${Object.values(data).filter(v=>v).length} alan doldurdu`});return{data,log}}
+  if(!resp.ok){log.push({t:'err',m:`Sunucu hatası: ${resp.status}`});return{data:eD(),log}}
+  const text=await resp.text();let res;try{res=JSON.parse(text)}catch(e){log.push({t:'err',m:'API yanıtı okunamadı'});return{data:eD(),log}}
+  const txt2=res.content?.map(b=>b.text||'').join('')||'';const jm2=txt2.match(/\{[\s\S]*\}/);
+  if(jm2){const p=JSON.parse(jm2[0]);const data=eD();Object.keys(p).forEach(k=>{if(data.hasOwnProperty(k)&&p[k]){const n=parseTR(String(p[k]));if(!isNaN(n)&&n!==0)data[k]=String(n)}});log.push({t:'ok',m:`AI ${Object.values(data).filter(v=>v).length} alan doldurdu`});return{data,log}}
   log.push({t:'err',m:'AI parse başarısız'});return{data:eD(),log}}catch(err){log.push({t:'err',m:'API: '+err.message});return{data:eD(),log}}
 }
 
@@ -287,8 +301,8 @@ function r2(v){return v?String(Math.round(v*100)/100):''}
 function pF(v){return parseFloat(v)||0}
 function fR(v){return v!=null&&!isNaN(v)?v.toFixed(2):"—"}
 function fP(v){return v!=null&&!isNaN(v)?v.toFixed(2)+"%":"—"}
-// Format as Turkish currency with proper thousand/decimal separators
-function fC(v){if(!v&&v!==0)return"—";const n=Number(v);if(isNaN(n))return"—";return new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',minimumFractionDigits:2,maximumFractionDigits:2}).format(n)}
+// Format as Turkish currency: 9.435.145,90 ₺ (symbol on RIGHT)
+function fC(v){if(!v&&v!==0)return"—";const n=Number(v);if(isNaN(n))return"—";return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n)+' ₺'}
 // Short format for charts
 function fCS(v){const n=Number(v);if(isNaN(n))return"—";if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+"B";if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+"M";if(Math.abs(n)>=1e3)return(n/1e3).toFixed(0)+"K";return String(n)}
 function nd(p){const d={};Object.entries(p.data).forEach(([k,v])=>{const n=parseTR(v);d[k]=isNaN(n)?undefined:n});return d}
@@ -337,7 +351,7 @@ function rC(){document.querySelectorAll('.mtab').forEach(t=>t.classList.toggle('
 function rInp(el){const p=S.periods[S.ap];const logH=p.parseLog.length?`<div class="plog">${p.parseLog.map(l=>`<div class="${l.t}">${l.t==='ok'?'✓':l.t==='warn'?'⚠':l.t==='err'?'✗':'ℹ'} ${l.m}</div>`).join('')}</div>`:'';
 let h=`<div class="card"><div class="card-h"><div class="card-t">📂 Dosya Yükleme — ${p.name}</div>${p.fileName?`<span style="font-size:10px;color:var(--gn);font-family:'JetBrains Mono',monospace">✓ ${p.fileName}</span>`:''}</div><div class="card-b"><div class="uz" id="upZ" onclick="document.getElementById('fInp').click()"><div class="uz-i">📂</div><div class="uz-t">${p.name} dönemi için dosya yükleyin</div><div class="uz-h">Excel (.xlsx .xls .csv) veya PDF — Sürükle & Bırak</div><div class="uz-h" style="margin-top:2px;color:var(--ac)">Detay Mizan · Bilanço · Gelir Tablosu · Beyanname</div></div><input type="file" id="fInp" accept=".xlsx,.xls,.csv,.pdf" style="display:none" onchange="hFile(this.files[0])">${logH}</div></div>`;
 h+=`<div class="card"><div class="card-h"><div class="card-t">✏️ Manuel Giriş — ${p.name}</div><button class="btn btn-g" onclick="sTab('ratios')">Rasyoları Hesapla →</button></div><div class="card-b">`;
-FIELDS.forEach(s=>{h+=`<div class="st">${s.section}</div><div class="ig">`;s.fields.forEach(f=>{const v=p.data[f.key]||'';const n=parseTR(v);const disp=(!isNaN(n)&&n!==0)?fC(n):'';h+=`<div class="igr"><label class="igl">${f.label} ${disp?`<span style="color:var(--gn);font-size:9px">${disp}</span>`:''}</label><input class="inp ${v?'filled':''}" value="${v}" placeholder="₺ 0,00" onchange="uF('${f.key}',this.value)" oninput="uF('${f.key}',this.value)"></div>`});h+=`</div>`});
+FIELDS.forEach(s=>{h+=`<div class="st">${s.section}</div><div class="ig">`;s.fields.forEach(f=>{const v=p.data[f.key]||'';const n=parseTR(v);const disp=(!isNaN(n)&&n!==0)?fC(n):'';const isMissing=p.missingFields&&p.missingFields.includes(f.key)&&p.fileName;h+=`<div class="igr"><label class="igl">${f.label} ${disp?`<span style="color:var(--gn);font-size:9px">${disp}</span>`:isMissing?'<span style="color:var(--rd);font-size:9px">⚠ Okunamadı</span>':''}</label><input class="inp ${v?'filled':''} ${isMissing?'missing':''}" value="${v}" placeholder="₺ 0,00" onchange="uF('${f.key}',this.value)" oninput="uF('${f.key}',this.value)"></div>`});h+=`</div>`});
 h+=`</div></div>`;el.innerHTML=h;
 setTimeout(()=>{const z=document.getElementById('upZ');if(!z)return;z.ondragover=e=>{e.preventDefault();z.classList.add('dov')};z.ondragleave=()=>z.classList.remove('dov');z.ondrop=e=>{e.preventDefault();z.classList.remove('dov');if(e.dataTransfer.files[0])hFile(e.dataTransfer.files[0])}},50)}
 function rRat(el){const p=S.periods[S.ap],d=nd(p);let h=`<div class="card"><div class="card-h"><div class="card-t">📊 Rasyolar — ${p.name}</div></div><div class="card-b">`;
@@ -352,10 +366,10 @@ let h=`<div class="card"><div class="card-h"><div class="card-t">⚖️ Karşıl
 aR.forEach(r=>{const vs=pV.map(p=>p.v[r.key]);if(!vs.some(v=>v!==null))return;const l=vs[vs.length-1],pr=vs[vs.length-2];const ch=(l!=null&&pr!=null&&pr!==0)?((l-pr)/Math.abs(pr))*100:null;h+=`<tr><td>${r.name}</td>`;vs.forEach(v=>h+=`<td>${v!==null?(r.pct?fP(v):r.cur?fC(v):fR(v)):"—"}</td>`);h+=`<td class="${ch>0?'cp':ch<0?'cn':''}">${ch!=null?`${ch>0?'▲':'▼'}${Math.abs(ch).toFixed(1)}%`:"—"}</td></tr>`});
 h+=`</tbody></table></div></div>`;el.innerHTML=h}
 function rAI(el){const has=S.periods.some(p=>Object.values(p.data).some(v=>v));let body='';
-if(S.aiLd)body=`<div class="aip-ld"><div class="dp"><span></span><span></span><span></span></div> Claude analiz ediyor...</div>`;
+if(S.aiLd)body=`<div class="aip-ld"><div class="dp"><span></span><span></span><span></span></div> Finansal veriler analiz ediliyor...</div>`;
 else if(S.aiRes)body=`<div class="aip-b">${S.aiRes}</div>`;
 else body=`<div class="aip-ph">${has?'"Analiz Oluştur" butonuna tıklayın.':'Önce veri girin.'}</div>`;
-el.innerHTML=`<div class="aip"><div class="aip-h"><div class="aip-t"><span style="font-size:15px">🤖</span> Claude AI Yorum</div><button class="btn btn-p" onclick="runAI()" ${S.aiLd||!has?'disabled':''}>${S.aiLd?'Analiz ediliyor...':'Analiz Oluştur'}</button></div>${body}</div>`}
+el.innerHTML=`<div class="aip"><div class="aip-h"><div class="aip-t"><span style="font-size:15px">🤖</span> AI Uzman Finansal Değerlendirme</div><button class="btn btn-p" onclick="runAI()" ${S.aiLd||!has?'disabled':''}>${S.aiLd?'Analiz ediliyor...':'Analiz Oluştur'}</button></div>${body}</div>`}
 
 // ACTIONS
 function sTab(t){S.tab=t;rC()}
@@ -372,20 +386,32 @@ function uF(k,v){
   S.periods[S.ap].data[k]=v;
   if(S.stab==='charts')rSB();
 }
+function showLoading(msg,sub){const d=document.createElement('div');d.id='loadOv';d.className='loading-overlay';d.innerHTML=`<div class="spinner"></div><div class="loading-text">${msg}</div><div class="loading-sub">${sub||''}</div>`;document.body.appendChild(d)}
+function hideLoading(){const d=document.getElementById('loadOv');if(d)d.remove()}
 function mergeD(p,d){Object.entries(d).forEach(([k,v])=>{if(v&&(!p.data[k]||p.data[k]==='0'))p.data[k]=v})}
+function getMissing(p){return FIELDS.flatMap(s=>s.fields).filter(f=>!p.data[f.key]||p.data[f.key]==='0').map(f=>f.key)}
 
-async function hFile(file){if(!file)return;const ext=file.name.split('.').pop().toLowerCase();const p=S.periods[S.ap];p.fileName=file.name;p.parseLog=[{t:'info',m:`Dosya: ${file.name} (${(file.size/1024).toFixed(0)}KB)`}];render();
-if(['xlsx','xls','csv'].includes(ext)){const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});p.parseLog.push({t:'info',m:`Sayfalar: ${wb.SheetNames.join(', ')}`});render();
+async function hFile(file){if(!file)return;const ext=file.name.split('.').pop().toLowerCase();const p=S.periods[S.ap];p.fileName=file.name;p.parseLog=[{t:'info',m:`Dosya: ${file.name} (${(file.size/1024).toFixed(0)}KB)`}];
+showLoading('Veriler Analiz Ediliyor...','Dosya okunuyor ve finansal veriler çıkarılıyor');
+render();
+if(['xlsx','xls','csv'].includes(ext)){const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});p.parseLog.push({t:'info',m:`Sayfalar: ${wb.SheetNames.join(', ')}`});
 const res=classifyExcel(wb);p.parseLog=[...p.parseLog,...res.log];
-if(res.needAI){render();const ai=await parseExcelAI(res.rawText);p.parseLog=[...p.parseLog,...ai.log];mergeD(p,ai.data)}else mergeD(p,res.data);
-S.tab='ratios';render()}
-else if(ext==='pdf'){render();const res=await parsePDFAI(file);p.parseLog=[...p.parseLog,...res.log];mergeD(p,res.data);S.tab='ratios';render()}
-else{p.parseLog.push({t:'err',m:'Desteklenmeyen: '+ext});render()}}
+if(res.needAI){const ai=await parseExcelAI(res.rawText);p.parseLog=[...p.parseLog,...ai.log];mergeD(p,ai.data)}else mergeD(p,res.data);
+p.missingFields=getMissing(p);
+if(p.missingFields.length)p.parseLog.push({t:'warn',m:`⚠ ${p.missingFields.length} alan okunamadı — manuel giriş gerekebilir`});
+hideLoading();S.tab='ratios';render()}
+else if(ext==='pdf'){const res=await parsePDFAI(file);p.parseLog=[...p.parseLog,...res.log];mergeD(p,res.data);
+p.missingFields=getMissing(p);
+if(p.missingFields.length)p.parseLog.push({t:'warn',m:`⚠ ${p.missingFields.length} alan okunamadı — manuel giriş gerekebilir`});
+hideLoading();S.tab='ratios';render()}
+else{hideLoading();p.parseLog.push({t:'err',m:'Desteklenmeyen: '+ext});render()}}
 
 async function runAI(){S.aiLd=true;S.aiRes='';rC();
 const pd=S.periods.map(p=>{const d=nd(p);const ratios={};Object.values(RATIOS).forEach(cat=>{cat.items.forEach(r=>{const v=r.calc(d);if(v!==null)ratios[r.name]=parseFloat(v.toFixed(4))})});return{donem:p.name,veriler:d,rasyolar:ratios}});
 try{const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:`Sen 15+ yıl deneyimli kıdemli finansal analistsin. Analiz et:\n${JSON.stringify(pd,null,2)}\n\n📋 GENEL DEĞERLENDİRME\n💧 LİKİDİTE\n📈 KÂRLILIK\n⚖️ BORÇLULUK\n⚙️ ETKİNLİK\n${S.periods.length>1?'📊 DÖNEMSEL KARŞILAŞTIRMA\n':''}⚠️ RİSKLER\n✅ ÖNERİLER\n\nTürkçe, profesyonel, spesifik rakamlarla yaz.`}]})});
-const data=await resp.json();S.aiRes=data.content?.map(b=>b.text||'').join('\n')||'Analiz oluşturulamadı.'}catch(err){S.aiRes='⚠️ API Hatası: '+err.message}
+const text=await resp.text();
+if(!resp.ok){S.aiRes='⚠️ Sunucu Hatası ('+resp.status+'): API bağlantısı kurulamadı. Lütfen ayarları kontrol edin.';S.aiLd=false;rC();return}
+try{const data=JSON.parse(text);S.aiRes=data.content?.map(b=>b.text||'').join('\n')||'Analiz oluşturulamadı.'}catch(e){S.aiRes='⚠️ API yanıt hatası. Lütfen tekrar deneyin.'}}catch(err){S.aiRes='⚠️ Bağlantı Hatası: '+err.message}
 S.aiLd=false;rC()}
 
 render();
