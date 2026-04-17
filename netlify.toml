@@ -4,6 +4,9 @@
 [functions]
   directory = "functions"
 
+[functions."claude-proxy"]
+  external_node_modules = ["node-fetch"]
+
 [[redirects]]
   from = "/api/claude"
   to = "/.netlify/functions/claude-proxy"
