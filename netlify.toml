@@ -2,7 +2,7 @@
   publish = "public"
 
 [functions]
-  directory = "netlify/functions"
+  directory = "functions"
 
 [[redirects]]
   from = "/api/claude"
