@@ -20,7 +20,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
 .sb-scroll{flex:1;overflow-y:auto}.sb-cat{border-bottom:1px solid rgba(35,46,72,.5)}.sb-cat-h{padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--t2);transition:background .15s;user-select:none}.sb-cat-h:hover{background:var(--bg2)}.sb-cat-h .arr{margin-left:auto;font-size:8px;transition:transform .2s}.sb-cat-h.open .arr{transform:rotate(90deg)}
 .fc{padding:10px 14px 10px 26px;border-bottom:1px solid rgba(35,46,72,.3)}.fc:hover{background:rgba(59,130,246,.04)}.fc-n{font-size:11px;font-weight:500;margin-bottom:2px}.fc-f{font-size:10px;color:var(--ac);font-family:'JetBrains Mono',monospace;margin-bottom:2px}.fc-i{font-size:9px;color:var(--tm)}
 .cb{padding:14px;border-bottom:1px solid rgba(35,46,72,.5)}.cb-l{font-size:9px;color:var(--tm);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}.cb canvas{width:100%!important;height:170px!important}
-.tgl{position:absolute;z-index:calc(var(--hh) + 54px + 10px);width:24px;height:24px;background:var(--bg2);border:1px solid var(--brd);border-radius:5px;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .3s}.tgl:hover{background:var(--ac);color:#fff}
+.tgl{width:24px;height:24px;background:var(--bg2);border:1px solid var(--brd);border-radius:5px;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .3s;flex-shrink:0;align-self:center}.tgl:hover{background:var(--ac);color:#fff}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .pbar{display:flex;align-items:center;gap:7px;padding:10px 18px;background:var(--bg1);border-bottom:1px solid var(--brd);flex-wrap:wrap;flex-shrink:0}.plab{font-size:9px;color:var(--tm);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1.5px;margin-right:4px}
 .chip{padding:4px 12px;border-radius:16px;font-size:11px;font-weight:500;border:1px solid var(--brd);background:transparent;color:var(--t2);cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}.chip:hover{border-color:var(--ac);color:var(--ac)}.chip.on{background:var(--ac);border-color:var(--ac);color:#fff}.chip.add{border-style:dashed;color:var(--tm)}.chip.add:hover{border-color:var(--gn);color:var(--gn)}.chip .x{font-size:8px;opacity:.5;cursor:pointer}.chip .x:hover{opacity:1;color:var(--rd)}
@@ -104,9 +104,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
 <div class="sb-scroll" id="sbCont"></div>
 <div class="userbar" id="userBar"><div class="userbar-av" id="userAv">?</div><div class="userbar-nm" id="userNm">Yükleniyor...</div><button class="userbar-out" onclick="doLogout()">Çıkış</button></div>
 </div>
-<button class="tgl" id="tglBtn" onclick="tglSB()" style="top:62px">◀</button>
+<button class="tgl" id="tglBtn" onclick="tglSB()">◀</button>
 <div class="main">
 <div class="sector-bar">
+  <button class="tgl" id="tglBtn" onclick="tglSB()">◀</button>
   <span class="sector-lbl">Sektör:</span>
   <select class="sector-sel" id="sektorSel" onchange="S.sektor=this.value;rRatIfActive();updateSectorBadge()">
     <option value="">— Sektör Seçin —</option>
@@ -376,7 +377,7 @@ function rCol(k,v){if(v==null||isNaN(v))return"var(--tm)";const R={cr:v=>v>=1.5?
 
 // RENDER
 function render(){rPB();rSB();rC();uT()}
-function uT(){const b=document.getElementById('tglBtn');b.textContent=S.sbo?'◀':'▶';b.style.left=S.sbo?'calc(var(--sw) + 4px)':'6px'}
+function uT(){const b=document.getElementById('tglBtn');b.textContent=S.sbo?'◀':'▶'}
 function rPB(){const b=document.getElementById('pBar');let h='<span class="plab">Dönemler:</span>';S.periods.forEach((p,i)=>{const label=p.name||'Dönem '+(i+1);h+=`<button class="chip ${i===S.ap?'on':''}" onclick="setAP(${i})" ondblclick="renamePeriod(${i})" title="Çift tıkla: adını düzenle">${label}${p.fileName?'<span style="opacity:.6;font-size:9px;margin-left:1px">📎</span>':''}${S.periods.length>1?`<span class="x" onclick="event.stopPropagation();remP(${i})">✕</span>`:''}</button>`});h+='<button class="chip add" onclick="openMo(\'add\')">+ Dönem Ekle</button>';b.innerHTML=h}
 function rSB(){const el=document.getElementById('sbCont');document.querySelectorAll('.sb-tab').forEach(t=>t.classList.toggle('on',t.dataset.st===S.stab));if(S.stab==='formulas'){let h='';Object.entries(RATIOS).forEach(([ck,cat])=>{const op=S.ecat===ck;h+=`<div class="sb-cat"><div class="sb-cat-h ${op?'open':''}" onclick="tCat('${ck}')"><span>${cat.icon}</span> ${cat.label}<span class="arr">▶</span></div>`;if(op)cat.items.forEach(r=>{h+=`<div class="fc"><div class="fc-n">${r.name}</div><div class="fc-f">${r.formula}</div><div class="fc-i">İdeal: ${r.ideal}</div></div>`});h+=`</div>`});el.innerHTML=h}else if(S.stab==='charts')rSBC(el);else rSBSaved(el)}
 
@@ -387,13 +388,15 @@ function rSBSaved(el){
     const d=new Date(item.olusturma_tarihi);
     const tarih=d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
     const sektor=item.sektor?` · ${SEKTOR_LABELS[item.sektor]||item.sektor}`:'';
+    const dosyaBtn=item.dosya_path?`<button class="saved-del" onclick="event.stopPropagation();downloadSaved('${item.dosya_path}')" title="Dosyayı İndir" style="color:var(--ac)">⬇</button>`:'';
     h+=`<div class="saved-item" onclick="loadSaved('${item.id}')">
-      <div class="saved-dot"></div>
+      <div class="saved-dot" style="${item.dosya_path?'background:var(--gn)':''}"></div>
       <div class="saved-info">
         <div class="saved-name">${item.sirket_adi||item.donem||'Adsız Analiz'}</div>
-        <div class="saved-meta">${tarih}${sektor}</div>
+        <div class="saved-meta">${tarih}${sektor}${item.dosya_adi?' 📎':''}</div>
       </div>
-      <button class="saved-del" onclick="event.stopPropagation();deleteSaved('${item.id}')" title="Sil">✕</button>
+      ${dosyaBtn}
+      <button class="saved-del" onclick="event.stopPropagation();deleteSaved('${item.id}','${item.dosya_path||''}')" title="Sil">✕</button>
     </div>`;
   });
   el.innerHTML=h;
@@ -516,11 +519,10 @@ function getMissing(p){return FIELDS.flatMap(s=>s.fields).filter(f=>!p.data[f.ke
 async function hFile(file){
   if(!file)return;
   const p=S.periods[S.ap];
-  // If period already has data (file loaded), warn user
   if(p.fileName){
     if(!confirm('Bu dönemde zaten veri var. Üzerine yazmak istiyor musunuz?\n\nFarklı bir dönem için yukarıdaki "+ Dönem Ekle" butonunu kullanın.'))return;
   }
-  // If period has no name, ask for it first
+  p.rawFile=file; // kayıt sırasında storage'a yüklemek için sakla
   if(!p.name){
     pendingFile=file;
     openMo('fileUpload');
@@ -653,19 +655,41 @@ async function saveAnaliz(){
   const orig=btn.textContent;btn.textContent='Kaydediliyor...';btn.disabled=true;
   const d=nd(p);const rasyoJson={};
   Object.entries(RATIOS).forEach(([,cat])=>cat.items.forEach(r=>{const v=r.calc(d);if(v!==null)rasyoJson[r.key]=parseFloat(v.toFixed(3))}));
-  const res=await sbCall('save',{sirketAdi,sektor:S.sektor,donem:p.name,rasyoJson,aiYorum:S.aiRes});
-  btn.disabled=false;
-  if(res.ok){
-    btn.textContent='✓ Kaydedildi';btn.classList.add('btn-save-anim');
-    await loadSavedList();
-    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('btn-save-anim')},2000);
-  }else{btn.textContent=orig;alert('Kayıt hatası: '+(res.error||'Bilinmeyen hata'))}
+  // Analiz kaydını oluştur
+  const res=await sbCall('save',{sirketAdi,sektor:S.sektor,donem:p.name,rasyoJson,aiYorum:S.aiRes,dosyaAdi:p.fileName||''});
+  if(!res.ok){btn.disabled=false;btn.textContent=orig;alert('Kayıt hatası: '+(res.error||'Bilinmeyen hata'));return}
+  const analizId=res.id;
+  // Eğer dosya varsa storage'a yükle
+  if(p.rawFile&&analizId){
+    btn.textContent='Dosya yükleniyor...';
+    try{
+      const buf=await p.rawFile.arrayBuffer();
+      const bytes=new Uint8Array(buf);
+      let bin='';for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+      const b64=btoa(bin);
+      const mime=p.rawFile.type||'application/octet-stream';
+      await sbCall('uploadFile',{analizId,dosyaAdi:p.fileName,base64Data:b64,mimeType:mime});
+    }catch(e){console.warn('Dosya yüklenemedi:',e)}
+  }
+  btn.disabled=false;btn.textContent='✓ Kaydedildi';btn.classList.add('btn-save-anim');
+  await loadSavedList();
+  setTimeout(()=>{btn.textContent=orig;btn.classList.remove('btn-save-anim')},2000);
 }
 
-async function deleteSaved(id){
+async function deleteSaved(id, dosyaPath){
   if(!confirm('Bu analizi silmek istiyor musunuz?'))return;
-  await sbCall('delete',{id});
+  await sbCall('delete',{id, dosyaPath:dosyaPath||''});
   await loadSavedList();
+}
+
+async function downloadSaved(dosyaPath){
+  if(!dosyaPath)return;
+  const btn=event.target;btn.textContent='⏳';
+  const res=await sbCall('getFileUrl',{dosyaPath});
+  btn.textContent='⬇';
+  if(res.url){
+    const a=document.createElement('a');a.href=res.url;a.download=dosyaPath.split('/').pop();a.click();
+  }else{alert('Dosya indirilemedi: '+(res.error||'Bilinmeyen hata'))}
 }
 
 function loadSaved(id){
