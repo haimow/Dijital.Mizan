@@ -741,23 +741,30 @@ function loadSaved(id){
   const item=S.savedList.find(x=>x.id===id);
   if(!item)return;
   const donemAdi=item.donem||item.sirket_adi||'Kayıtlı Analiz';
-  const mevcut=S.periods[S.ap];
-  if(Object.values(mevcut.data).some(v=>v&&v!=='0')){
-    S.periods.push({name:donemAdi,data:eD(),fileName:null,parseLog:[]});
+  // Mevcut dönemde veri varsa yeni dönem ekle
+  const mevcutDolu=S.periods[S.ap]&&Object.values(S.periods[S.ap].data).some(v=>v&&v!=='0');
+  if(mevcutDolu){
+    S.periods.push({name:donemAdi,data:eD(),fileName:null,parseLog:[],missingFields:[]});
     S.ap=S.periods.length-1;
   } else {
     S.periods[S.ap].name=donemAdi;
   }
-  const p=S.periods[S.ap];
+  // S.ap bu noktada doğru index — direkt index ile eriş
+  const idx=S.ap;
+  S.periods[idx].data=eD(); // önce temizle
+  // rasyo_json'dan ham veri alanlarını yükle
   const fieldKeys=new Set(FIELDS.flatMap(s=>s.fields).map(f=>f.key));
   if(item.rasyo_json){
-    const rj=item.rasyo_json;
-    Object.keys(rj).forEach(k=>{
-      if(fieldKeys.has(k)&&rj[k]!==undefined&&rj[k]!==null&&rj[k]!==''){
-        p.data[k]=String(rj[k]);
+    Object.keys(item.rasyo_json).forEach(k=>{
+      if(fieldKeys.has(k)){
+        const v=item.rasyo_json[k];
+        if(v!==undefined&&v!==null&&v!==''){
+          S.periods[idx].data[k]=String(v);
+        }
       }
     });
   }
+  // Sektör
   if(item.sektor){
     S.sektor=item.sektor;
     const sel=document.getElementById('sektorSel');
@@ -765,14 +772,14 @@ function loadSaved(id){
     updateSectorBadge();
   }
   S.aiRes=item.ai_yorum||'';
-  p.parseLog=[{t:'ok',m:'📂 Kayıtlı analiz yüklendi: '+donemAdi}];
-  if(item.dosya_adi)p.parseLog.push({t:'info',m:'📎 Orijinal dosya: '+item.dosya_adi});
-  // fileName'i KAYDETME — set edilirse rInp "okunamadı" uyarısı gösteriyor
-  p.fileName=null;
-  // missingFields'ı da temizle — kayıtlı veride eksik alan uyarısı olmamalı
-  p.missingFields=[];
-  const hasFilled=Object.values(p.data).some(v=>v&&v!=='0');
-  S.tab=hasFilled?'ratios':'input';
+  S.periods[idx].parseLog=[{t:'ok',m:'📂 Kayıtlı analiz yüklendi: '+donemAdi}];
+  if(item.dosya_adi)S.periods[idx].parseLog.push({t:'info',m:'📎 Orijinal dosya: '+item.dosya_adi});
+  S.periods[idx].fileName=null;
+  S.periods[idx].missingFields=[];
+  // Dolu alan sayısını kontrol et
+  const dolular=Object.values(S.periods[idx].data).filter(v=>v&&v!=='0').length;
+  S.periods[idx].parseLog.push({t:'ok',m:dolular+' alan yüklendi'});
+  S.tab=dolular>0?'input':'input'; // her zaman veri girişi sekmesine git
   render();
 }
 
