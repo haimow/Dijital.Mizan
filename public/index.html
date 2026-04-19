@@ -91,9 +91,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
     <div class="auth-logo">F</div>
     <div class="auth-title">FinAnaliz Pro</div>
     <div class="auth-sub">Finansal analizlerinize güvenli erişim için<br>giriş yapın veya hesap oluşturun.</div>
-    <button class="auth-btn auth-btn-p" onclick="netlifyIdentity.open('login')">📧 E-posta ile Giriş</button>
-    <button class="auth-btn auth-btn-g" onclick="netlifyIdentity.open('login')">🔑 Google ile Giriş</button>
-    <div style="font-size:10px;color:var(--tm);margin-top:12px">Hesabınız yok mu? <span style="color:var(--ac);cursor:pointer" onclick="netlifyIdentity.open('signup')">Kayıt Ol</span></div>
+    <button class="auth-btn auth-btn-p" onclick="document.getElementById('authOverlay').style.zIndex='50';netlifyIdentity.open('login')">📧 E-posta ile Giriş</button>
+    <button class="auth-btn auth-btn-g" onclick="document.getElementById('authOverlay').style.zIndex='50';netlifyIdentity.open('login')">🔑 Google ile Giriş</button>
+    <div style="font-size:10px;color:var(--tm);margin-top:12px">Hesabınız yok mu? <span style="color:var(--ac);cursor:pointer" onclick="document.getElementById('authOverlay').style.zIndex='50';netlifyIdentity.open('signup')">Kayıt Ol</span></div>
   </div>
 </div>
 
@@ -605,7 +605,7 @@ function initAuth(){
     document.getElementById('app').style.display='none';
     document.getElementById('authOverlay').style.display='flex';
   });
-  netlifyIdentity.init({ APIUrl: 'https://finanaliz.netlify.app/.netlify/identity' });
+  netlifyIdentity.init();
 }
 
 function showAuthOverlay(){
