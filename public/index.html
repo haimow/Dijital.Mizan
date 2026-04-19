@@ -147,7 +147,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
   <button class="btn" id="saveBtn" onclick="saveAnaliz()" style="font-size:11px" title="Bu analizi kaydet">💾 Kaydet</button>
 </div>
 <div class="pbar" id="pBar"></div>
-<div class="mtabs"><button class="mtab on" data-mt="input" onclick="sTab('input')">📥 Veri Girişi</button><button class="mtab" data-mt="ratios" onclick="sTab('ratios')">📊 Rasyolar</button><button class="mtab" data-mt="compare" onclick="sTab('compare')">⚖️ Karşılaştırma</button><button class="mtab" data-mt="ai" onclick="sTab('ai')">🤖 Uzman Yorum</button><button class="mtab" data-mt="detay" onclick="sTab('detay')">🔍 Detay Analiz</button><button class="mtab" data-mt="kredi" onclick="sTab('kredi')">🏦 Kredi Analizi</button><button class="mtab" data-mt="rapor" onclick="sTab('rapor')">📄 PDF Rapor</button></div>
+<div class="mtabs"><button class="mtab on" data-mt="input" onclick="sTab('input')">📥 Veri Girişi</button><button class="mtab" data-mt="ratios" onclick="sTab('ratios')">📊 Rasyolar</button><button class="mtab" data-mt="compare" onclick="sTab('compare')">⚖️ Karşılaştırma</button><button class="mtab" data-mt="ai" onclick="sTab('ai')">🤖 Uzman Yorum</button><button class="mtab" data-mt="detay" onclick="sTab('detay')">🔍 Detay Mizan</button><button class="mtab" data-mt="kredi" onclick="sTab('kredi')">🏦 Kredi Analizi</button><button class="mtab" data-mt="rapor" onclick="sTab('rapor')">📄 PDF Rapor</button></div>
 <div class="cont" id="cont"></div>
 </div>
 </div>
@@ -523,9 +523,50 @@ function rInp(el){const p=S.periods[S.ap];const logH=p.parseLog.length?`<div cla
 const hasData=p.fileName&&Object.values(p.data).some(v=>v);
 const guidance=hasData?`<div style="margin-top:10px;padding:10px 14px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:6px;font-size:11px;color:var(--ac)">💡 Farklı bir dönem analiz etmek için yukarıdaki <strong>"+ Dönem Ekle"</strong> butonunu kullanın. Dönem adını çift tıklayarak düzenleyebilirsiniz.</div>`:'';
 let h=`<div class="card"><div class="card-h"><div class="card-t">📂 Dosya Yükleme${p.name?' — '+p.name:''}</div>${p.fileName?`<span style="font-size:10px;color:var(--gn);font-family:'JetBrains Mono',monospace">✓ ${p.fileName}</span>`:''}</div><div class="card-b"><div class="uz" id="upZ" onclick="document.getElementById('fInp').click()"><div class="uz-i">📂</div><div class="uz-t">Analiz edilecek dönem için dosya yükleyin</div><div class="uz-h">Excel (.xlsx .xls .csv) veya PDF — Sürükle & Bırak</div><div class="uz-h" style="margin-top:2px;color:var(--ac)">Detay Mizan · Bilanço · Gelir Tablosu · Beyanname</div></div><input type="file" id="fInp" accept=".xlsx,.xls,.csv,.pdf" style="display:none" onchange="hFile(this.files[0])">${logH}${guidance}</div></div>`;
-h+=`<div class="card"><div class="card-h"><div class="card-t">✏️ Manuel Giriş${p.name?' — '+p.name:''}</div><button class="btn btn-g" onclick="sTab('ratios')">Rasyoları Hesapla →</button></div><div class="card-b">`;
-FIELDS.forEach(s=>{h+=`<div class="st">${s.section}</div><div class="ig">`;s.fields.forEach(f=>{const v=p.data[f.key]||'';const n=parseTR(v);const hasVal=!isNaN(n)&&n!==0&&v!=='';const disp=hasVal?fC(n):'';const isMissing=p.missingFields&&p.missingFields.includes(f.key)&&p.fileName;h+=`<div class="igr"><label class="igl">${f.label} ${disp?`<span style="color:var(--gn);font-size:9px">${disp}</span>`:isMissing?`<span style="color:var(--rd);font-size:9px">⚠ Okunamadı</span>`:''}</label><input class="inp ${hasVal?'filled':''} ${isMissing?'missing':''}" value="${v}" placeholder="0,00 ₺" onchange="uF('${f.key}',this.value)" oninput="uF('${f.key}',this.value)"></div>`});h+=`</div>`});
-h+=`</div></div>`;el.innerHTML=h;
+
+// Detay mizan yüklüyse özet göster, manuel giriş gösterme
+if(p.isMizan){
+  const accts=p.mizanAccts||{};
+  const detay=p.mizanDetay||{};
+  const gruplar=[
+    {baslik:'Dönen Varlıklar',kodlar:[['100','Kasa'],['101','Alınan Çekler'],['102','Bankalar'],['120','Ticari Alacaklar'],['121','Alacak Senetleri'],['150','İlk Madde ve Malzeme'],['153','Ticari Mallar'],['191','İndirilecek KDV']],tip:'d'},
+    {baslik:'Duran Varlıklar',kodlar:[['250','Arazi ve Arsalar'],['252','Binalar'],['253','Tesis Makine Cihazlar'],['255','Demirbaşlar'],['257','Birikmiş Amortismanlar']],tip:'d'},
+    {baslik:'Kısa Vadeli Yükümlülükler',kodlar:[['300','Banka Kredileri'],['320','Satıcılar'],['321','Borç Senetleri'],['360','Öd.Vergi ve Fonlar'],['361','Öd.SGK Primleri']],tip:'c'},
+    {baslik:'Uzun Vadeli Yükümlülükler',kodlar:[['400','Banka Kredileri'],['405','Çıkarılmış Tahviller']],tip:'c'},
+    {baslik:'Özsermaye',kodlar:[['500','Sermaye'],['570','Geçmiş Yıl Kârları'],['590','Dönem Net Kârı']],tip:'c'},
+    {baslik:'Gelir Tablosu',kodlar:[['600','Yurt İçi Satışlar'],['601','Yurt Dışı Satışlar'],['610','Satıştan İadeler'],['620','SMM'],['631','Paz. Satış Dağ. Gid.'],['632','Genel Yön. Giderleri'],['660','Kısa Vad. Fin. Gid.'],['661','Uzun Vad. Fin. Gid.']],tip:'mix'},
+  ];
+  h+=`<div class="card"><div class="card-h"><div class="card-t">📋 Detay Mizan — Hesap Özeti${p.name?' ('+p.name+')':''}</div><button class="btn btn-g" onclick="sTab('detay')" style="font-size:11px">🔍 Detay Analiz →</button></div><div class="card-b">`;
+  gruplar.forEach(g=>{
+    const satirlar=g.kodlar.filter(([k])=>accts[k]);
+    if(!satirlar.length)return;
+    h+=`<div class="st">${g.baslik}</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-bottom:8px">`;
+    satirlar.forEach(([k,ad])=>{
+      const a=accts[k];if(!a)return;
+      let val=0;
+      if(g.tip==='d')val=a.d-a.c;
+      else if(g.tip==='c')val=a.c-a.d;
+      else val=Math.abs(a.d-a.c)>Math.abs(a.c-a.d)?a.d-a.c:a.c-a.d;
+      const altSay=(detay[k]||[]).length;
+      h+=`<div style="background:var(--bgi);border:1px solid var(--brd);border-radius:6px;padding:8px 10px">
+        <div style="font-size:9px;color:var(--tm);font-family:'JetBrains Mono',monospace">${k} ${altSay?`<span style="color:var(--ac)">(${altSay} alt hesap)</span>`:''}</div>
+        <div style="font-size:10px;color:var(--t2);margin:1px 0">${ad}</div>
+        <div style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${val>=0?'var(--t1)':'var(--rd)'}">${fC(val)}</div>
+      </div>`;
+    });
+    h+=`</div>`;
+  });
+  h+=`<div style="margin-top:8px;padding:8px 12px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:6px;font-size:11px;color:var(--ac)">
+    ℹ Bu dönem detay mizan ile yüklenmiştir. Rasyo hesaplamaları için <b>Rasyolar</b> sekmesi yerine <b>Detay Mizan Analizi</b> sekmesini kullanın.
+  </div></div></div>`;
+}else{
+  // Normal manuel giriş
+  h+=`<div class="card"><div class="card-h"><div class="card-t">✏️ Manuel Giriş${p.name?' — '+p.name:''}</div><button class="btn btn-g" onclick="sTab('ratios')">Rasyoları Hesapla →</button></div><div class="card-b">`;
+  FIELDS.forEach(s=>{h+=`<div class="st">${s.section}</div><div class="ig">`;s.fields.forEach(f=>{const v=p.data[f.key]||'';const n=parseTR(v);const hasVal=!isNaN(n)&&n!==0&&v!=='';const disp=hasVal?fC(n):'';const isMissing=p.missingFields&&p.missingFields.includes(f.key)&&p.fileName;h+=`<div class="igr"><label class="igl">${f.label} ${disp?`<span style="color:var(--gn);font-size:9px">${disp}</span>`:isMissing?`<span style="color:var(--rd);font-size:9px">⚠ Okunamadı</span>`:''}</label><input class="inp ${hasVal?'filled':''} ${isMissing?'missing':''}" value="${v}" placeholder="0,00 ₺" onchange="uF('${f.key}',this.value)" oninput="uF('${f.key}',this.value)"></div>`});h+=`</div>`});
+  h+=`</div></div>`;
+}
+
+h+=`</div>`;el.innerHTML=h;
 setTimeout(()=>{const z=document.getElementById('upZ');if(!z)return;z.ondragover=e=>{e.preventDefault();z.classList.add('dov')};z.ondragleave=()=>z.classList.remove('dov');z.ondrop=e=>{e.preventDefault();z.classList.remove('dov');if(e.dataTransfer.files[0])hFile(e.dataTransfer.files[0])}},50)}
 function rCmp(el){if(S.periods.length<2){el.innerHTML='<div class="card"><div class="card-b" style="text-align:center;color:var(--tm);padding:36px">En az <b>2 dönem</b> gerekli.<br><br><button class="btn btn-p" onclick="openMo(\'add\')">+ Dönem Ekle</button></div></div>';return}
 if(S.cmpA==null||S.cmpB==null||S.cmpA===S.cmpB){
@@ -534,7 +575,6 @@ if(S.cmpA==null||S.cmpB==null||S.cmpA===S.cmpB){
   S.cmpB=sorted.length>=2?S.periods.indexOf(sorted[sorted.length-1]):1;
   if(S.cmpA===S.cmpB)S.cmpB=S.cmpA===0?1:0;
 }
-// Geçersiz index koruması
 if(S.cmpA>=S.periods.length)S.cmpA=0;
 if(S.cmpB>=S.periods.length)S.cmpB=Math.min(1,S.periods.length-1);
 const pA=S.periods[S.cmpA],pB=S.periods[S.cmpB];
@@ -546,6 +586,47 @@ selH+=`</select><span style="color:var(--tm);font-size:11px">ile</span>
 <select class="inp" style="width:auto;padding:4px 8px;font-size:11px" onchange="S.cmpB=parseInt(this.value);S.cmpA=S.cmpA===S.cmpB?(S.cmpB===0?1:0):S.cmpA;rC()">`;
 S.periods.forEach((p,i)=>{selH+=`<option value="${i}" ${i===S.cmpB?'selected':''}>${p.name||'Dönem '+(i+1)}</option>`});
 selH+=`</select><span style="color:var(--tm);font-size:11px">karşılaştırılıyor</span></div>`;
+
+// İki dönem de mizan ise → hesap kodu karşılaştırması
+if(pA?.isMizan&&pB?.isMizan){
+  const acA=pA.mizanAccts||{};const acB=pB.mizanAccts||{};
+  const tumKodlar=[...new Set([...Object.keys(acA),...Object.keys(acB)])].sort();
+  const GRUP_ADLARI={'1':'Dönen Varlıklar','2':'Duran Varlıklar','3':'Kısa Vadeli Yük.','4':'Uzun Vadeli Yük.','5':'Özsermaye','6':'Gelir Tablosu','7':'Maliyet Hesapları'};
+  let h=`<div class="card"><div class="card-h"><div class="card-t">⚖️ Detay Mizan Karşılaştırması</div>${selH}</div><div class="card-b" style="padding:0;overflow:auto;max-height:72vh">`;
+  let sonGrup='';
+  h+=`<table class="ctb"><thead><tr><th>Kod</th><th>Hesap Adı</th><th>${nameA}</th><th>${nameB}</th><th>Değişim</th><th>Δ%</th></tr></thead><tbody>`;
+  tumKodlar.forEach(k=>{
+    const grup=k.charAt(0);
+    if(grup!==sonGrup){
+      sonGrup=grup;
+      h+=`<tr style="background:rgba(59,130,246,.08)"><td colspan="6" style="font-size:9px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:1px;padding:6px 11px">${GRUP_ADLARI[grup]||'Diğer'}</td></tr>`;
+    }
+    const a=acA[k],b=acB[k];
+    const ad=(a?.n||b?.n||'').substring(0,35);
+    const getBak=(ac,tip)=>{
+      if(!ac)return 0;
+      if(['1','2','6','7'].includes(tip))return ac.d-ac.c;
+      return ac.c-ac.d;
+    };
+    const vA=getBak(a,grup),vB=getBak(b,grup);
+    if(Math.abs(vA)<1&&Math.abs(vB)<1)return; // sıfır satırları atla
+    const delta=vB-vA;
+    const deltaPct=vA!==0?((delta/Math.abs(vA))*100):null;
+    const dCol=delta>0?'var(--gn)':delta<0?'var(--rd)':'var(--t2)';
+    h+=`<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ac)">${k}</td>
+      <td>${ad}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fC(vA)}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fC(vB)}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace;color:${dCol}">${delta>0?'+':''}${fC(delta)}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace;color:${dCol}">${deltaPct!==null?(delta>0?'+':'')+deltaPct.toFixed(1)+'%':'—'}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div></div>`;
+  el.innerHTML=h;return;
+}
+
+// Birisi veya ikisi de normal dönem → rasyo karşılaştırması
 const aR=Object.values(RATIOS).flatMap(c=>c.items);
 const dA=nd(pA),dB=nd(pB);
 let h=`<div class="card"><div class="card-h"><div class="card-t">⚖️ Karşılaştırma</div>${selH}</div><div class="card-b" style="padding:0;overflow:auto;max-height:66vh"><table class="ctb"><thead><tr><th>Rasyo</th><th>${nameA}</th><th>${nameB}</th><th>Δ (${nameB} vs ${nameA})</th></tr></thead><tbody>`;
@@ -789,10 +870,16 @@ async function saveAnaliz(){
   const btn=document.getElementById('saveBtn');
   const orig=btn.textContent;btn.textContent='Kaydediliyor...';btn.disabled=true;
   const d=nd(p);const rasyoJson={};
-  // Ham veri alanlarını kaydet (yeniden yükleme için)
+  // Ham veri alanlarını kaydet
   FIELDS.flatMap(s=>s.fields).forEach(f=>{if(p.data[f.key]&&p.data[f.key]!=='0')rasyoJson[f.key]=p.data[f.key]});
-  // Hesaplanan rasyoları da ekle
+  // Hesaplanan rasyoları ekle
   Object.entries(RATIOS).forEach(([,cat])=>cat.items.forEach(r=>{const v=r.calc(d);if(v!==null)rasyoJson['_r_'+r.key]=parseFloat(v.toFixed(3))}));
+  // Detay mizan ise accts verisini de kaydet
+  if(p.isMizan&&p.mizanAccts){
+    rasyoJson['__isMizan']=true;
+    // Ana hesap toplamlarını kaydet (detay yeniden oluşturulamaz ama accts kaydedilebilir)
+    rasyoJson['__accts']=JSON.stringify(p.mizanAccts);
+  }
   // Analiz kaydını oluştur
   const res=await sbCall('save',{sirketAdi,sektor:S.sektor,donem:p.name,rasyoJson,aiYorum:S.aiRes,dosyaAdi:p.fileName||''});
   if(!res.ok){btn.disabled=false;btn.textContent=orig;alert('Kayıt hatası: '+(res.error||'Bilinmeyen hata'));return}
@@ -886,12 +973,35 @@ function loadSaved(id){
   // Dolu alan sayısını kontrol et
   const dolular=Object.values(S.periods[idx].data).filter(v=>v&&v!=='0').length;
   S.periods[idx].parseLog.push({t:'ok',m:dolular+' alan yüklendi'});
-  S.tab=dolular>0?'input':'input'; // her zaman veri girişi sekmesine git
+  // Detay mizan verilerini geri yükle
+  if(item.rasyo_json&&item.rasyo_json['__isMizan']){
+    S.periods[idx].isMizan=true;
+    try{
+      const acctsStr=item.rasyo_json['__accts'];
+      if(acctsStr)S.periods[idx].mizanAccts=JSON.parse(acctsStr);
+      S.periods[idx].mizanDetay={};// Alt hesap detayı kayıtta yok, boş bırak
+      S.periods[idx].parseLog.push({t:'info',m:'🔍 Detay mizan verileri yüklendi (hesap kodları özeti)'});
+    }catch(e){console.warn('Mizan accts parse hatası:',e)}
+  }
+  S.tab='input';
   render();
 }
 
 // ─── UPDATED rRat — sektöre duyarlı renk ────────────────────────────────────
 function rRat(el){const p=S.periods[S.ap],d=nd(p);
+// Detay mizan için rasyo hesaplanamaz
+if(p.isMizan){
+  el.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:32px">
+    <div style="font-size:32px;margin-bottom:10px">🔍</div>
+    <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:8px">Detay Mizan yüklendi</div>
+    <div style="font-size:11px;color:var(--t2);line-height:1.7;max-width:400px;margin:0 auto">
+      Rasyolar hesaplaması için Bilanço + Gelir Tablosu verileri gerekir.<br>
+      Detay mizan analizine geçmek için aşağıdaki butonu kullanın.
+    </div>
+    <button class="btn btn-p" onclick="sTab('detay')" style="margin-top:16px">🔍 Detay Mizan Analizine Git</button>
+  </div></div>`;
+  return;
+}
 const sektorInfo=S.sektor?`<span style="font-size:10px;color:var(--tm);font-weight:400"> — ${SEKTOR_LABELS[S.sektor]||S.sektor} benchmark'ı uygulandı</span>`:'<span style="font-size:10px;color:var(--am);font-weight:400"> — Sektör seçilmedi (genel değerler)</span>';
 let h=`<div class="card"><div class="card-h"><div class="card-t">📊 Rasyolar${p.name?' — '+p.name:''}${sektorInfo}</div></div><div class="card-b">`;
 Object.entries(RATIOS).forEach(([,cat])=>{const cm=cat.items.map(r=>({...r,value:r.calc(d)}));if(!cm.some(r=>r.value!==null))return;h+=`<div class="rcat"><div class="rcat-h">${cat.icon} ${cat.label}</div><div class="rgrid">`;
