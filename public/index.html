@@ -89,7 +89,7 @@ h1.hero-title em{font-style:italic;background:linear-gradient(135deg,#8ab4f8 0%,
 .section-header h2{font-family:var(--serif);font-size:clamp(28px,4vw,48px);font-weight:400;letter-spacing:-1.5px;line-height:1.1;margin-bottom:12px}
 .section-header p{font-size:15px;color:var(--t2);font-weight:300;line-height:1.7;max-width:500px}
 
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--brd);border-radius:16px;overflow:hidden}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--brd);border-radius:16px;overflow:hidden}.feat-cell:last-child:nth-child(3n+1){grid-column:span 3}.feat-cell:last-child:nth-child(3n+2){grid-column:span 2}
 .feat-cell{background:var(--bg);padding:32px;transition:background .2s;position:relative;overflow:hidden}
 .feat-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);opacity:0;transition:opacity .3s}
 .feat-cell:hover{background:var(--bg2)}
@@ -221,7 +221,7 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
       Yapay Zeka Destekli · Türkiye THP Bazlı
     </div>
     <h1 class="hero-title">
-      Mizanı yükle,<br><em>anı anla.</em>
+      Mizandan karara,<br><em>tek ekranda.</em>
     </h1>
     <p class="hero-sub">Excel mizanınız, PDF bilançonuz veya e-Defter XML'iniz dakikalar içinde derin finansal analize dönüşür. Muhasebeciler için, muhasebeciler tarafından tasarlandı.</p>
     <div class="hero-actions">
@@ -287,7 +287,7 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
         <h3>Kredi & BDDK Skoru</h3>
         <p>Altman Z-Score ve 5 BDDK kriteri. "Banka neden kredi vermiyor?" sorusunun rakamsal yanıtı.</p>
       </div>
-      <div class="feat-cell">
+      <div class="feat-cell" style="grid-column:span 3">
         <span class="feat-icon">📅</span>
         <h3>Vergi Takvimi</h3>
         <p>KDV, Muhtasar, BA-BS, Geçici Vergi, Kurumlar Vergisi için 3-gün öncesi e-posta bildirimi.</p>
