@@ -127,8 +127,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
 <div class="userbar" id="userBar"><div class="userbar-av" id="userAv">?</div><div class="userbar-nm" id="userNm">Yükleniyor...</div><button class="userbar-out" onclick="doLogout()">Çıkış</button></div>
 </div>
 <div class="main">
-<button class="tgl" id="tglBtn" onclick="tglSB()" style="position:fixed;left:var(--sw);top:10px;z-index:300;transition:left .3s">◀</button>
-<div class="sector-bar">
+<div class="sector-bar" style="position:relative">
+<button class="tgl" id="tglBtn" onclick="tglSB()" style="margin-right:6px;flex-shrink:0">◀</button>
   <span class="sector-lbl">Sektör:</span>
   <select class="sector-sel" id="sektorSel" onchange="S.sektor=this.value;rRatIfActive();updateSectorBadge()">
     <option value="">— Sektör Seçin —</option>
@@ -429,7 +429,7 @@ function rCol(k,v){if(v==null||isNaN(v))return"var(--tm)";const R={cr:v=>v>=1.5?
 
 // RENDER
 function render(){rPB();rSB();rC();uT()}
-function uT(){const b=document.getElementById('tglBtn');if(!b)return;b.textContent=S.sbo?'◀':'▶';b.style.left=S.sbo?'var(--sw)':'6px'}
+function uT(){const b=document.getElementById('tglBtn');if(!b)return;b.textContent=S.sbo?'◀':'▶'}
 function rPB(){const b=document.getElementById('pBar');let h='<span class="plab">Dönemler:</span>';S.periods.forEach((p,i)=>{const label=p.name||'Dönem '+(i+1);h+=`<button class="chip ${i===S.ap?'on':''}" onclick="setAP(${i})" ondblclick="renamePeriod(${i})" title="Çift tıkla: adını düzenle">${label}${p.fileName?'<span style="opacity:.6;font-size:9px;margin-left:1px">📎</span>':''}${S.periods.length>1?`<span class="x" onclick="event.stopPropagation();remP(${i})">✕</span>`:''}</button>`});h+='<button class="chip add" onclick="openMo(\'add\')">+ Dönem Ekle</button>';b.innerHTML=h}
 function rSB(){const el=document.getElementById('sbCont');document.querySelectorAll('.sb-tab').forEach(t=>t.classList.toggle('on',t.dataset.st===S.stab));if(S.stab==='formulas'){let h='';Object.entries(RATIOS).forEach(([ck,cat])=>{const op=S.ecat===ck;h+=`<div class="sb-cat"><div class="sb-cat-h ${op?'open':''}" onclick="tCat('${ck}')"><span>${cat.icon}</span> ${cat.label}<span class="arr">▶</span></div>`;if(op)cat.items.forEach(r=>{h+=`<div class="fc"><div class="fc-n">${r.name}</div><div class="fc-f">${r.formula}</div><div class="fc-i">İdeal: ${r.ideal}</div></div>`});h+=`</div>`});el.innerHTML=h}else if(S.stab==='charts')rSBC(el);else rSBSaved(el)}
 
@@ -1550,72 +1550,143 @@ function renderSankey(p, d){
   const faalKar=pF(p.data.operatingProfit)||0;
   const faalGider=pF(p.data.operatingExpenses)||0;
   const finGider=pF(p.data.financialExpenses)||0;
-  const finGelir=pF(p.data.financialIncome)||0;
   const netKar=pF(p.data.netProfit)||0;
   const vergi=pF(p.data.taxExpense)||0;
+  const finGiderTopla=Math.abs(finGider)+Math.abs(vergi);
 
-  // Sankey'i detay analiz kartının sonuna ekle
   const cont=document.getElementById('cont');
   if(!cont)return;
-  const sankeyDiv=document.createElement('div');
-  sankeyDiv.className='card';
-  sankeyDiv.style.marginTop='0';
+  // Sankey zaten varsa çıkar
+  const existing=cont.querySelector('.sankey-card');
+  if(existing)existing.remove();
 
-  const W=580,H=320,PAD=16;
-  const scale=(v)=>Math.max(2,(Math.abs(v)/totalSatis)*220);
-  const fmtM=(v)=>{const abs=Math.abs(v);return abs>=1000000?(abs/1000000).toFixed(1)+'M₺':abs>=1000?(abs/1000).toFixed(0)+'K₺':abs.toFixed(0)+'₺'};
-  const pct=(v)=>(v/totalSatis*100).toFixed(1)+'%';
+  const W=640, H=400;
+  const fmtM=(v)=>{const abs=Math.abs(v);
+    return abs>=1000000000?(abs/1000000000).toFixed(1)+'Mr₺':
+           abs>=1000000?(abs/1000000).toFixed(1)+'M₺':
+           abs>=1000?(abs/1000).toFixed(0)+'K₺':abs.toFixed(0)+'₺'};
+  const pct=(v)=>(Math.abs(v)/totalSatis*100).toFixed(1)+'%';
 
-  // Düğüm pozisyonları: x, y-merkez, yükseklik, renk, etiket
+  // Bar yüksekliklerini hesapla:
+  // Gerçek oranları koru AMA minimum 14px garantile (küçük değerler görünsün)
+  const MIN_H=14, MAX_H=200;
+  const rawScale=(v)=>Math.abs(v)/totalSatis;
+  
+  // Tüm değerler
+  const vals={
+    satis:totalSatis, smm, brut:brutKar,
+    faalGid:faalGider, faalk:faalKar,
+    finGid:finGiderTopla, netkar:Math.abs(netKar)
+  };
+  
+  // İki aşamalı ölçekleme: önce raw, sonra min garantili, sonra normalize
+  const rawH={};
+  Object.entries(vals).forEach(([k,v])=>rawH[k]=rawScale(v));
+  const satisRaw=rawH['satis'];
+  const scaleH=(raw)=>{
+    const linear=raw/satisRaw*MAX_H;
+    return Math.max(MIN_H, linear);
+  };
+  
+  // Sütun X pozisyonları
+  const COL={A:44, B:220, C:400, D:560};
+  const BW=22; // bar genişliği
+
+  // Düğüm tanımları — yc (y-center) hesaplanacak
+  // Sütun A: Net Satış
+  // Sütun B: SMM (üst), Brüt Kâr (alt)
+  // Sütun C: Faal. Gider (üst), Faal. Kârı (alt)  
+  // Sütun D: Fin.Gid+Vergi (üst), Net Kâr (alt)
+
+  const satisH=scaleH(rawH.satis);
+  const smmH=scaleH(rawH.smm);
+  const brutH=scaleH(rawH.brut);
+  const fgidH=scaleH(rawH.faalGid);
+  const fkH=scaleH(rawH.faalk);
+  const findH=scaleH(rawH.finGid);
+  const nkH=scaleH(rawH.netkar);
+
+  // Y pozisyonları — sütun başına hizalama
+  const GAP=20; // gruplar arası boşluk
+  const TOP_PAD=30;
+
+  // Sütun A: tek eleman
+  const satisY=TOP_PAD+satisH/2+40;
+
+  // Sütun B: SMM üstte, Brüt Kâr altta, ikisi birlikte satisH kadar
+  const bTopY=TOP_PAD+30;
+  const smmY=bTopY+smmH/2;
+  const brutY=bTopY+smmH+GAP+brutH/2;
+
+  // Sütun C: Faal. Gider üstte, Faal. Kârı altta (Brüt Kâr'dan geliyor)
+  const cRef=brutY; // Brüt Kâr merkezine hizala
+  const fgidY=cRef-GAP/2-fgidH/2;
+  const fkY=cRef+GAP/2+fkH/2;
+
+  // Sütun D: Fin. Gid + Vergi üstte, Net Kâr altta (Faal. Kârı'dan geliyor)
+  const dRef=fkY;
+  const findY=dRef-GAP/2-findH/2;
+  const nkY=dRef+GAP/2+nkH/2;
+
   const nodes={
-    satis:   {x:40, yc:160, h:scale(totalSatis), col:'#6366f1', lbl:'Net Satışlar'},
-    smm:     {x:200,yc:80,  h:scale(smm),         col:'#ef4444', lbl:'SMM'},
-    brut:    {x:200,yc:220, h:scale(brutKar),      col:'#22c55e', lbl:'Brüt Kâr'},
-    faalGid: {x:360,yc:130, h:scale(faalGider),    col:'#f59e0b', lbl:'Faal. Gider'},
-    faalk:   {x:360,yc:250, h:scale(faalKar),      col:'#22c55e', lbl:'Faal. Kârı'},
-    finGid:  {x:490,yc:200, h:scale(finGider+vergi),col:'#ef4444',lbl:'Fin. Gid+Vergi'},
-    netkar:  {x:490,yc:285, h:scale(Math.max(netKar,0)), col:netKar>=0?'#22c55e':'#ef4444', lbl:'Net Kâr'},
+    satis: {x:COL.A,yc:satisY,h:satisH,col:'#6366f1',lbl:'Net Satışlar',val:totalSatis,side:'right'},
+    smm:   {x:COL.B,yc:smmY,  h:smmH,  col:'#ef4444',lbl:'SMM',         val:smm,       side:'right'},
+    brut:  {x:COL.B,yc:brutY, h:brutH, col:'#22c55e',lbl:'Brüt Kâr',    val:brutKar,   side:'right'},
+    faalGid:{x:COL.C,yc:fgidY,h:fgidH, col:'#f59e0b',lbl:'Faal. Gider', val:faalGider, side:'right'},
+    faalk: {x:COL.C,yc:fkY,   h:fkH,   col:'#22c55e',lbl:'Faal. Kârı',  val:faalKar,   side:'right'},
+    finGid:{x:COL.D,yc:findY, h:findH, col:'#ef4444',lbl:'Fin.Gid+Vergi',val:finGiderTopla,side:'left'},
+    netkar:{x:COL.D,yc:nkY,   h:nkH,   col:netKar>=0?'#22c55e':'#ef4444',lbl:'Net Kâr',val:netKar,side:'left'},
   };
 
-  // Bağlantılar: from, to, color, opacity
+  // Bağlantılar
   const links=[
-    {f:'satis',t:'smm',   col:'#ef4444',op:.3},
-    {f:'satis',t:'brut',  col:'#22c55e',op:.3},
-    {f:'brut', t:'faalGid',col:'#f59e0b',op:.3},
-    {f:'brut', t:'faalk',  col:'#22c55e',op:.3},
-    {f:'faalk',t:'finGid', col:'#ef4444',op:.3},
-    {f:'faalk',t:'netkar', col:netKar>=0?'#22c55e':'#ef4444',op:.3},
+    {f:'satis',t:'smm',   col:'#ef4444',op:.25},
+    {f:'satis',t:'brut',  col:'#22c55e',op:.25},
+    {f:'brut', t:'faalGid',col:'#f59e0b',op:.25},
+    {f:'brut', t:'faalk',  col:'#22c55e',op:.25},
+    {f:'faalk',t:'finGid', col:'#ef4444',op:.25},
+    {f:'faalk',t:'netkar', col:netKar>=0?'#22c55e':'#ef4444',op:.25},
   ];
 
-  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px;font-family:inherit">`;
+  // Gerçek SVG yüksekliğini düğümlere göre hesapla
+  const allY=Object.values(nodes).map(n=>n.yc+n.h/2);
+  const realH=Math.max(...allY)+30;
 
-  // Bağlantı yolları (gradient bandlar)
+  let svg=`<svg viewBox="0 0 ${W} ${realH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;font-family:'DM Sans',sans-serif">`;
+
+  // Bağlantı bandları
   links.forEach(l=>{
     const fn=nodes[l.f],tn=nodes[l.t];
     if(!fn||!tn)return;
-    const bw=Math.min(fn.h,tn.h)*0.6;
-    const x1=fn.x+28,x2=tn.x,cx=(x1+x2)/2;
-    const y1=fn.yc,y2=tn.yc;
+    const bw=Math.min(fn.h,tn.h)*0.55;
+    const x1=fn.x+BW, x2=tn.x;
+    const cx=(x1+x2)/2;
+    const y1=fn.yc, y2=tn.yc;
     svg+=`<path d="M${x1},${y1-bw/2} C${cx},${y1-bw/2} ${cx},${y2-bw/2} ${x2},${y2-bw/2} L${x2},${y2+bw/2} C${cx},${y2+bw/2} ${cx},${y1+bw/2} ${x1},${y1+bw/2} Z" fill="${l.col}" opacity="${l.op}"/>`;
   });
 
-  // Düğümler (dikdörtgen barlar)
+  // Barlar + yazılar
   Object.entries(nodes).forEach(([k,n])=>{
-    if(n.h<2)return;
-    const ry=n.yc-n.h/2;
-    svg+=`<rect x="${n.x}" y="${ry}" width="28" height="${n.h}" rx="4" fill="${n.col}" opacity=".9"/>`;
-    // Etiket
-    const ly=n.yc;const lx=n.x+34;
-    const val=k==='satis'?totalSatis:k==='smm'?smm:k==='brut'?brutKar:k==='faalGid'?faalGider:k==='faalk'?faalKar:k==='finGid'?(finGider+vergi):netKar;
-    const labelRight=n.x>420;
-    svg+=`<text x="${labelRight?n.x-4:lx}" y="${ly-5}" font-size="9" fill="var(--t2)" font-weight="600" text-anchor="${labelRight?'end':'start'}">${n.lbl}</text>`;
-    svg+=`<text x="${labelRight?n.x-4:lx}" y="${ly+7}" font-size="9" fill="${n.col}" font-weight="700" text-anchor="${labelRight?'end':'start'}">${fmtM(val)}</text>`;
-    svg+=`<text x="${labelRight?n.x-4:lx}" y="${ly+17}" font-size="8" fill="var(--tm)" text-anchor="${labelRight?'end':'start'}">${pct(val)}</text>`;
+    // Bar
+    svg+=`<rect x="${n.x}" y="${n.yc-n.h/2}" width="${BW}" height="${n.h}" rx="3" fill="${n.col}" opacity=".92"/>`;
+    
+    // Yazı pozisyonu: sol veya sağ taraf
+    const isLeft=n.side==='left';
+    const tx=isLeft?n.x-6:n.x+BW+6;
+    const anchor=isLeft?'end':'start';
+    const ty=n.yc;
+    
+    // 3 satır yazı: etiket, tutar, yüzde
+    svg+=`<text x="${tx}" y="${ty-10}" font-size="9" fill="#9ca3af" font-weight="600" text-anchor="${anchor}">${n.lbl}</text>`;
+    svg+=`<text x="${tx}" y="${ty+3}" font-size="10" fill="${n.col}" font-weight="700" text-anchor="${anchor}">${fmtM(n.val)}</text>`;
+    svg+=`<text x="${tx}" y="${ty+14}" font-size="8.5" fill="#6b7280" text-anchor="${anchor}">${pct(n.val)}</text>`;
   });
 
   svg+=`</svg>`;
 
-  sankeyDiv.innerHTML=`<div class="card-h"><div class="card-t">🌊 Gelir Akışı (Sankey)</div><span style="font-size:10px;color:var(--tm)">Net Satış → Kâr Dönüşümü</span></div><div class="card-b" style="padding:12px 8px">${svg}</div>`;
+  const sankeyDiv=document.createElement('div');
+  sankeyDiv.className='card sankey-card';
+  sankeyDiv.innerHTML=`<div class="card-h"><div class="card-t">🌊 Gelir Akışı (Sankey)</div><span style="font-size:10px;color:var(--tm)">Net Satış → Kâr Dönüşümü</span></div><div class="card-b" style="padding:10px 6px;overflow:visible">${svg}</div>`;
   cont.appendChild(sankeyDiv);
 }
 
