@@ -15,14 +15,24 @@
   to = "/.netlify/functions/supabase-proxy"
   status = 200
 
-# ─── Dosya indirme endpoint'i ─────────────────────────────
 [[redirects]]
   from = "/api/download"
   to = "/.netlify/functions/supabase-proxy"
   status = 200
 
-# ─── Tüm bilinmeyen route'ları index.html'e yönlendir (SPA) ─
+# ─── /app/* → SPA fallback ────────────────────────────────
+# app/ klasörü içindeki bilinmeyen route'ları app/index.html'e yönlendir
+[[redirects]]
+  from = "/app/*"
+  to = "/app/index.html"
+  status = 200
+
+# ─── Kök fallback (landing page) ──────────────────────────
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# ─── Vergi Takvimi — her gün 09:00 TSI (06:00 UTC) ────────
+[functions."tax-reminder"]
+  schedule = "0 6 * * *"
