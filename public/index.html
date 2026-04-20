@@ -440,7 +440,7 @@ function rSBSaved(el){
     const d=new Date(item.olusturma_tarihi);
     const tarih=d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
     const sektor=item.sektor?` · ${SEKTOR_LABELS[item.sektor]||item.sektor}`:'';
-    const dosyaBtn=item.dosya_path?`<button class="saved-del" onclick="event.stopPropagation();downloadSaved('${item.dosya_path}')" title="Dosyayı İndir" style="color:var(--ac)">⬇</button>`:'';
+    const dosyaBtn=item.dosya_path?`<button class="saved-del" onclick="event.stopPropagation();downloadSaved('${item.id}')" title="Dosyayı İndir" style="color:var(--ac)">⬇</button>`:'';
     h+=`<div class="saved-item" onclick="loadSaved('${item.id}')">
       <div class="saved-dot" style="${item.dosya_path?'background:var(--gn)':''}"></div>
       <div class="saved-info">
@@ -448,7 +448,7 @@ function rSBSaved(el){
         <div class="saved-meta">${tarih}${sektor}${item.dosya_adi?' 📎':''}</div>
       </div>
       ${dosyaBtn}
-      <button class="saved-del" onclick="event.stopPropagation();deleteSaved('${item.id}','${item.dosya_path||''}')" title="Sil">✕</button>
+      <button class="saved-del" onclick="event.stopPropagation();deleteSaved('${item.id}')" title="Sil">✕</button>
     </div>`;
   });
   el.innerHTML=h;
@@ -916,17 +916,20 @@ async function saveAnaliz(){
 
 async function deleteSaved(id, dosyaPath){
   if(!confirm('Bu analizi silmek istiyor musunuz?'))return;
-  await sbCall('delete',{id, dosyaPath:dosyaPath||''});
+  await sbCall('delete',{id}); // dosyaPath client'tan gönderilmiyor, proxy DB'den alır
   await loadSavedList();
 }
 
-async function downloadSaved(dosyaPath){
-  if(!dosyaPath)return;
+async function downloadSaved(id){
+  if(!id)return;
   const btn=event.target;btn.textContent='⏳';
-  const res=await sbCall('getFileUrl',{dosyaPath});
+  const res=await sbCall('getFileUrl',{id}); // path değil ID gönder
   btn.textContent='⬇';
   if(res.url){
-    const a=document.createElement('a');a.href=res.url;a.download=dosyaPath.split('/').pop();a.click();
+    const a=document.createElement('a');
+    a.href=res.url;
+    a.download=res.dosyaAdi||'analiz'; // orijinal ad client'a gelir, path gelmez
+    a.click();
   }else{alert('Dosya indirilemedi: '+(res.error||'Bilinmeyen hata'))}
 }
 
