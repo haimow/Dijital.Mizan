@@ -121,12 +121,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
 
 <div class="app" id="app" style="display:none">
 <div class="sidebar" id="sidebar">
-<div class="sb-brand"><div class="brand-i">F</div><div><div class="brand-n">FinAnaliz Pro</div><div class="brand-s">Finansal Analiz Platformu</div></div><button class="tgl" id="tglBtn" onclick="tglSB()" style="margin-left:auto">◀</button></div>
+<div class="sb-brand"><div class="brand-i">F</div><div><div class="brand-n">FinAnaliz Pro</div><div class="brand-s">Finansal Analiz Platformu</div></div></div>
 <div class="sb-tabs"><button class="sb-tab on" data-st="formulas" onclick="sSTab('formulas')">📐 Formüller</button><button class="sb-tab" data-st="charts" onclick="sSTab('charts')">📊 Grafikler</button><button class="sb-tab" data-st="saved" onclick="sSTab('saved')">💾 Kayıtlı</button></div>
 <div class="sb-scroll" id="sbCont"></div>
 <div class="userbar" id="userBar"><div class="userbar-av" id="userAv">?</div><div class="userbar-nm" id="userNm">Yükleniyor...</div><button class="userbar-out" onclick="doLogout()">Çıkış</button></div>
 </div>
 <div class="main">
+<button class="tgl" id="tglBtn" onclick="tglSB()" style="position:fixed;left:var(--sw);top:10px;z-index:300;transition:left .3s">◀</button>
 <div class="sector-bar">
   <span class="sector-lbl">Sektör:</span>
   <select class="sector-sel" id="sektorSel" onchange="S.sektor=this.value;rRatIfActive();updateSectorBadge()">
@@ -428,7 +429,7 @@ function rCol(k,v){if(v==null||isNaN(v))return"var(--tm)";const R={cr:v=>v>=1.5?
 
 // RENDER
 function render(){rPB();rSB();rC();uT()}
-function uT(){const b=document.getElementById('tglBtn');b.textContent=S.sbo?'◀':'▶'}
+function uT(){const b=document.getElementById('tglBtn');if(!b)return;b.textContent=S.sbo?'◀':'▶';b.style.left=S.sbo?'var(--sw)':'6px'}
 function rPB(){const b=document.getElementById('pBar');let h='<span class="plab">Dönemler:</span>';S.periods.forEach((p,i)=>{const label=p.name||'Dönem '+(i+1);h+=`<button class="chip ${i===S.ap?'on':''}" onclick="setAP(${i})" ondblclick="renamePeriod(${i})" title="Çift tıkla: adını düzenle">${label}${p.fileName?'<span style="opacity:.6;font-size:9px;margin-left:1px">📎</span>':''}${S.periods.length>1?`<span class="x" onclick="event.stopPropagation();remP(${i})">✕</span>`:''}</button>`});h+='<button class="chip add" onclick="openMo(\'add\')">+ Dönem Ekle</button>';b.innerHTML=h}
 function rSB(){const el=document.getElementById('sbCont');document.querySelectorAll('.sb-tab').forEach(t=>t.classList.toggle('on',t.dataset.st===S.stab));if(S.stab==='formulas'){let h='';Object.entries(RATIOS).forEach(([ck,cat])=>{const op=S.ecat===ck;h+=`<div class="sb-cat"><div class="sb-cat-h ${op?'open':''}" onclick="tCat('${ck}')"><span>${cat.icon}</span> ${cat.label}<span class="arr">▶</span></div>`;if(op)cat.items.forEach(r=>{h+=`<div class="fc"><div class="fc-n">${r.name}</div><div class="fc-f">${r.formula}</div><div class="fc-i">İdeal: ${r.ideal}</div></div>`});h+=`</div>`});el.innerHTML=h}else if(S.stab==='charts')rSBC(el);else rSBSaved(el)}
 
@@ -1033,22 +1034,54 @@ const ic=RATIOS.leverage.items[2].calc(d);if(ic!=null)addScore(ic,[5,3,1.5]);
 addScore(RATIOS.efficiency.items[0].calc(d),[3,2,1]);
 if(scores.length>=3){const avg=scores.reduce((a,b)=>a+b,0)/scores.length;const pct=Math.round(avg);const c=pct>=70?'var(--gn)':pct>=45?'var(--am)':'var(--rd)';const lab=pct>=80?'Güçlü':pct>=65?'Sağlıklı':pct>=50?'Orta':pct>=35?'Zayıf':'Riskli';
 h+=`<div style="margin-top:20px;display:flex;justify-content:center"><div class="score-c"><div class="score-ring" style="border-color:${c};color:${c}">${pct}</div><div class="score-l" style="color:${c}">Finansal Sağlık: ${lab}</div><div style="font-size:9px;color:var(--tm);margin-top:4px">${scores.length} gösterge üzerinden hesaplandı</div></div></div>`}
-h+=`</div></div>`;el.innerHTML=h}
+h+=`</div></div>`;el.innerHTML=h;
+// Sankey diyagramı rasyolar sekmesine de ekle
+if(pF(p.data.netSales)>0){setTimeout(()=>renderSankey(p,d),50);}}
 
 // ─── UPDATED runAI — sektör bağlamı ─────────────────────────────────────────
 async function runAI(){S.aiLd=true;S.aiRes='';rC();
-const pd=S.periods.map(p=>{const d=nd(p);const ratios={};Object.values(RATIOS).forEach(cat=>{cat.items.forEach(r=>{const v=r.calc(d);if(v!==null)ratios[r.name]=parseFloat(v.toFixed(2))})});
+const p=S.periods[S.ap]; // Aktif dönem
+const d=nd(p);
+const ratios={};Object.values(RATIOS).forEach(cat=>{cat.items.forEach(r=>{const v=r.calc(d);if(v!==null)ratios[r.name]=parseFloat(v.toFixed(2))})});
 const summary={netSatislar:d.netSales,brutKar:d.grossProfit,faaliyetKari:d.operatingProfit,netKar:d.netProfit,toplamAktif:d.totalAssets,ozsermaye:d.equity,toplamBorc:d.totalLiabilities,stoklar:d.inventory,alacaklar:d.tradeReceivables,nakit:d.cashEquivalents,amortisman:d.depreciation};
-return{donem:p.name,ozet:summary,rasyolar:ratios}});
+const donemAdi=p.name||'Aktif Dönem';
+
+// Önceki dönem karşılaştırması (varsa)
+let karsilastirma='';
+if(S.periods.length>1){
+  const prev=S.periods.filter((x,i)=>i!==S.ap&&Object.values(x.data).some(v=>v)).pop();
+  if(prev){
+    const pd=nd(prev);
+    karsilastirma=`\n\nKarşılaştırma dönemi (${prev.name||'Önceki'}): Net Satış ${pd.netSales}, Brüt Kar ${pd.grossProfit}, Net Kar ${pd.netProfit}, Toplam Aktif ${pd.totalAssets}`;
+  }
+}
+
+// Mizan context
+let mizanCtx='';
+if(p.isMizan&&p.mizanAccts){
+  const a=p.mizanAccts;
+  const bD=(k)=>a[k]?(a[k].d-a[k].c):0;
+  const bC=(k)=>a[k]?(a[k].c-a[k].d):0;
+  mizanCtx=`\n\nDetay Mizan Verileri (THP bazlı):
+- Ticari Alacak (120-122): ${bD('120')+bD('121')+bD('122')}
+- Ticari Borç (320-322): ${bC('320')+bC('321')+bC('322')}
+- Kasa (100): ${bD('100')}, Bankalar (102): ${bD('102')}
+- Ortaklara Borç (131): ${bC('131')}
+- İndirilecek KDV (191): ${bD('191')}
+- Stoklar (150-157): ${bD('150')+bD('151')+bD('152')+bD('153')+bD('157')}`;
+}
+
 const sektorCtx=S.sektor?`Şirket sektörü: ${SEKTOR_LABELS[S.sektor]||S.sektor}. Bu sektörün Türkiye'deki tipik dinamiklerini (mevsimsellik, karlılık beklentileri, finansman yapısı) göz önünde bulundur.\n\n`:'';
 try{const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:`Sen kıdemli bir finansal analistsin. ${sektorCtx}Aşağıdaki verilere dayanarak kısa bir YÖNETİCİ ÖZETİ hazırla. Net ve aksiyona yönelik olsun.
 
-${JSON.stringify(pd)}
+Analiz edilen dönem: ${donemAdi}
+Finansal Özet: ${JSON.stringify(summary)}
+Hesaplanan Rasyolar: ${JSON.stringify(ratios)}${karsilastirma}${mizanCtx}
 
 Şu yapıda yaz (her bölüm 2-3 cümle):
 
 📋 GENEL DURUM: Şirketin finansal sağlığını tek paragrafta özetle.
-${S.periods.length>1?'📊 DÖNEMSEL DEĞİŞİM: Önceki döneme göre öne çıkan değişimleri belirt.\n':''}${S.sektor?`🏭 SEKTÖR KARŞILAŞTIRMASI: ${SEKTOR_LABELS[S.sektor]} sektörü ortalamasına göre güçlü ve zayıf yönleri belirt.\n`:''}⚠️ DİKKAT EDİLMESİ GEREKENLER: En kritik 2-3 risk faktörünü sırala.
+${S.periods.length>1?'📊 DÖNEMSEL DEĞİŞİM: Önceki döneme göre öne çıkan değişimleri belirt.\n':''}${S.sektor?`🏭 SEKTÖR KARŞILAŞTIRMASI: ${SEKTOR_LABELS[S.sektor]} sektörü ortalamasına göre güçlü ve zayıf yönleri belirt.\n`:''}${p.isMizan?'🔍 MİZAN ANALİZİ: Detay mizan verilerinden (alacak/borç dengesi, ortaklar cari, KDV durumu) öne çıkan bulgular.\n':''}⚠️ DİKKAT EDİLMESİ GEREKENLER: En kritik 2-3 risk faktörünü sırala.
 ✅ TAVSİYELER: Yönetime somut, uygulanabilir 3-4 öneri sun.
 
 Türkçe, profesyonel ve özlü yaz.`}]})});
@@ -1451,6 +1484,47 @@ function rDetay(el){
     h+=`</div></div>`;
   }
 
+  // ════════════════════════════════════════════════════════
+  // BÖLÜM 7: GELECEKTEKİ GİDERLER (180/280) ANALİZİ
+  // ════════════════════════════════════════════════════════
+  const pesinGiderKisa=bD('180')+bD('181'); // Gelecek aylara ait giderler
+  const pesinGiderUzun=bD('280')+bD('281'); // Gelecek yıllara ait giderler
+  const pesinGiderTopla=pesinGiderKisa+pesinGiderUzun;
+  if(pesinGiderTopla>0){
+    h+=`<div class="card"><div class="card-h"><div class="card-t">📅 Gelecek Dönem Giderleri (180/280)</div><span style="font-size:10px;color:var(--tm)">${fC(pesinGiderTopla)}</span></div><div class="card-b">`;
+    const aktifPay=totalAktif>0?(pesinGiderTopla/totalAktif*100):0;
+    h+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:var(--tm);margin-bottom:4px">Kısa Vadeli (180)</div>
+        <div style="font-size:16px;font-weight:700;color:var(--t1)">${fC(pesinGiderKisa)}</div>
+        <div style="font-size:9px;color:var(--tm)">Gelecek aylara ait</div>
+      </div>
+      <div style="background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:var(--tm);margin-bottom:4px">Uzun Vadeli (280)</div>
+        <div style="font-size:16px;font-weight:700;color:var(--t1)">${fC(pesinGiderUzun)}</div>
+        <div style="font-size:9px;color:var(--tm)">Gelecek yıllara ait</div>
+      </div>
+      <div style="background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:var(--tm);margin-bottom:4px">Aktif Payı</div>
+        <div style="font-size:16px;font-weight:700;color:${aktifPay>15?'var(--rd)':aktifPay>8?'var(--am)':'var(--gn)'}">%${aktifPay.toFixed(1)}</div>
+        <div style="font-size:9px;color:var(--tm)">${aktifPay>15?'Yüksek':aktifPay>8?'Dikkat':'Normal'}</div>
+      </div>
+    </div>`;
+    // 180 alt hesapları (kira, sigorta, abonelik ayrımı)
+    const pesinAlt=[...(detay['180']||[]),...(detay['181']||[]),...(detay['280']||[]),...(detay['281']||[])].filter(x=>Math.abs(x.bakiye)>0).sort((a,b)=>Math.abs(b.bakiye)-Math.abs(a.bakiye));
+    if(pesinAlt.length>0){
+      h+=`<table class="ctb"><thead><tr><th>Hesap / Açıklama</th><th>Tutar</th><th>Aktif Payı</th></tr></thead><tbody>`;
+      pesinAlt.slice(0,10).forEach(x=>{
+        const pay=totalAktif>0?(Math.abs(x.bakiye)/totalAktif*100):0;
+        h+=`<tr><td>${x.ad||x.kod}</td><td style="font-family:'JetBrains Mono',monospace;text-align:right">${fC(Math.abs(x.bakiye))}</td><td style="font-family:'JetBrains Mono',monospace;text-align:right;color:var(--tm)">%${pay.toFixed(1)}</td></tr>`;
+      });
+      h+=`</tbody></table>`;
+    }
+    h+=`<div style="font-size:9px;color:var(--tm);margin-top:8px">ℹ 180/280 hesapları peşin ödenmiş giderleri içerir (kira, sigorta, lisans vb.). Yüksek bakiye ilerleyen dönemlerde gider olarak yansıyacak demektir — nakit çıkışı zaten gerçekleşmiş ama gider henüz kaydedilmemiştir.</div>`;
+    if(aktifPay>15)h+=`<div style="margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:6px;font-size:11px;color:var(--rd)">⚠ Aktifin %${aktifPay.toFixed(0)}'i peşin giderden oluşuyor. Bankalar bu tutarı likit olmayan aktif olarak değerlendirir.</div>`;
+    h+=`</div></div>`;
+  }
+
   // Alt hesap yoksa uyarı
   if(mAlt.length===0&&tAlt.length===0&&(detay['100']||[]).length===0&&(detay['102']||[]).length===0&&!ortaklar131Borc&&!ortaklar131Alacak){
     h+=`<div class="card"><div class="card-b" style="text-align:center;padding:24px;color:var(--tm)">
@@ -1461,6 +1535,88 @@ function rDetay(el){
 
   h+=`</div>`;
   el.innerHTML=h;
+
+  // Sankey diyagramı — DOM hazır olduktan sonra render et
+  if(totalSatis>0){setTimeout(()=>renderSankey(p,d),50);}
+}
+
+// ─── SANKey DİYAGRAMI ─────────────────────────────────────────────────────────
+function renderSankey(p, d){
+  const totalSatis=pF(p.data.netSales)||0;
+  if(totalSatis<=0)return;
+
+  const brutKar=pF(p.data.grossProfit)||0;
+  const smm=pF(p.data.cogs)||0;
+  const faalKar=pF(p.data.operatingProfit)||0;
+  const faalGider=pF(p.data.operatingExpenses)||0;
+  const finGider=pF(p.data.financialExpenses)||0;
+  const finGelir=pF(p.data.financialIncome)||0;
+  const netKar=pF(p.data.netProfit)||0;
+  const vergi=pF(p.data.taxExpense)||0;
+
+  // Sankey'i detay analiz kartının sonuna ekle
+  const cont=document.getElementById('cont');
+  if(!cont)return;
+  const sankeyDiv=document.createElement('div');
+  sankeyDiv.className='card';
+  sankeyDiv.style.marginTop='0';
+
+  const W=580,H=320,PAD=16;
+  const scale=(v)=>Math.max(2,(Math.abs(v)/totalSatis)*220);
+  const fmtM=(v)=>{const abs=Math.abs(v);return abs>=1000000?(abs/1000000).toFixed(1)+'M₺':abs>=1000?(abs/1000).toFixed(0)+'K₺':abs.toFixed(0)+'₺'};
+  const pct=(v)=>(v/totalSatis*100).toFixed(1)+'%';
+
+  // Düğüm pozisyonları: x, y-merkez, yükseklik, renk, etiket
+  const nodes={
+    satis:   {x:40, yc:160, h:scale(totalSatis), col:'#6366f1', lbl:'Net Satışlar'},
+    smm:     {x:200,yc:80,  h:scale(smm),         col:'#ef4444', lbl:'SMM'},
+    brut:    {x:200,yc:220, h:scale(brutKar),      col:'#22c55e', lbl:'Brüt Kâr'},
+    faalGid: {x:360,yc:130, h:scale(faalGider),    col:'#f59e0b', lbl:'Faal. Gider'},
+    faalk:   {x:360,yc:250, h:scale(faalKar),      col:'#22c55e', lbl:'Faal. Kârı'},
+    finGid:  {x:490,yc:200, h:scale(finGider+vergi),col:'#ef4444',lbl:'Fin. Gid+Vergi'},
+    netkar:  {x:490,yc:285, h:scale(Math.max(netKar,0)), col:netKar>=0?'#22c55e':'#ef4444', lbl:'Net Kâr'},
+  };
+
+  // Bağlantılar: from, to, color, opacity
+  const links=[
+    {f:'satis',t:'smm',   col:'#ef4444',op:.3},
+    {f:'satis',t:'brut',  col:'#22c55e',op:.3},
+    {f:'brut', t:'faalGid',col:'#f59e0b',op:.3},
+    {f:'brut', t:'faalk',  col:'#22c55e',op:.3},
+    {f:'faalk',t:'finGid', col:'#ef4444',op:.3},
+    {f:'faalk',t:'netkar', col:netKar>=0?'#22c55e':'#ef4444',op:.3},
+  ];
+
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px;font-family:inherit">`;
+
+  // Bağlantı yolları (gradient bandlar)
+  links.forEach(l=>{
+    const fn=nodes[l.f],tn=nodes[l.t];
+    if(!fn||!tn)return;
+    const bw=Math.min(fn.h,tn.h)*0.6;
+    const x1=fn.x+28,x2=tn.x,cx=(x1+x2)/2;
+    const y1=fn.yc,y2=tn.yc;
+    svg+=`<path d="M${x1},${y1-bw/2} C${cx},${y1-bw/2} ${cx},${y2-bw/2} ${x2},${y2-bw/2} L${x2},${y2+bw/2} C${cx},${y2+bw/2} ${cx},${y1+bw/2} ${x1},${y1+bw/2} Z" fill="${l.col}" opacity="${l.op}"/>`;
+  });
+
+  // Düğümler (dikdörtgen barlar)
+  Object.entries(nodes).forEach(([k,n])=>{
+    if(n.h<2)return;
+    const ry=n.yc-n.h/2;
+    svg+=`<rect x="${n.x}" y="${ry}" width="28" height="${n.h}" rx="4" fill="${n.col}" opacity=".9"/>`;
+    // Etiket
+    const ly=n.yc;const lx=n.x+34;
+    const val=k==='satis'?totalSatis:k==='smm'?smm:k==='brut'?brutKar:k==='faalGid'?faalGider:k==='faalk'?faalKar:k==='finGid'?(finGider+vergi):netKar;
+    const labelRight=n.x>420;
+    svg+=`<text x="${labelRight?n.x-4:lx}" y="${ly-5}" font-size="9" fill="var(--t2)" font-weight="600" text-anchor="${labelRight?'end':'start'}">${n.lbl}</text>`;
+    svg+=`<text x="${labelRight?n.x-4:lx}" y="${ly+7}" font-size="9" fill="${n.col}" font-weight="700" text-anchor="${labelRight?'end':'start'}">${fmtM(val)}</text>`;
+    svg+=`<text x="${labelRight?n.x-4:lx}" y="${ly+17}" font-size="8" fill="var(--tm)" text-anchor="${labelRight?'end':'start'}">${pct(val)}</text>`;
+  });
+
+  svg+=`</svg>`;
+
+  sankeyDiv.innerHTML=`<div class="card-h"><div class="card-t">🌊 Gelir Akışı (Sankey)</div><span style="font-size:10px;color:var(--tm)">Net Satış → Kâr Dönüşümü</span></div><div class="card-b" style="padding:12px 8px">${svg}</div>`;
+  cont.appendChild(sankeyDiv);
 }
 
 // ─── KREDİ ANALİZİ ───────────────────────────────────────────────────────────
