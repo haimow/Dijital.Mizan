@@ -1344,8 +1344,10 @@ function rCmp(el){
           const prev=vi>0?vals[vi-1]:null;
           const d2=v!==null&&prev!==null?v-prev:null;
           const d2Col=d2===null?'':d2>0?'#a78bfa':'rgba(255,255,255,.75)';
+          // cur:1 rasyolarda (FAVÖK, NİS) da yüzdesel delta göster
+          const d2Pct=d2!==null&&prev!==null&&prev!==0?(d2/Math.abs(prev)*100):null;
           const d2Txt=d2!==null&&Math.abs(d2)>0.01
-            ?`<span style="font-size:9px;color:${d2Col};margin-left:4px">${d2>0?'▲':'▼'}${r.pct?Math.abs(d2).toFixed(1)+'%':fR(Math.abs(d2))}</span>`
+            ?`<span style="font-size:9px;color:${d2Col};margin-left:4px">${d2>0?'▲':'▼'}${(r.pct||r.cur)?d2Pct!==null?Math.abs(d2Pct).toFixed(1)+'%':'—':fR(Math.abs(d2))}</span>`
             :'';
           return `<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${rColS(r.key,v)}">${fmt(v)}${d2Txt}</td>`;
         }).join('')}
