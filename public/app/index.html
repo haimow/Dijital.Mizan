@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mizan Mind — Yapay Zeka Destekli Finansal Analiz</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233b82f6'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='18' font-weight='bold'>F</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233b82f6'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='18' font-weight='bold'>M</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
 /* GoTrue-JS v1.0.1 — inline bundle */
@@ -2983,7 +2983,7 @@ function raporOnizle(){
     Object.entries(RATIOS).forEach(([,cat])=>{
       const items=cat.items.map(r=>({...r,value:r.calc(d)})).filter(r=>r.value!==null);
       if(!items.length)return;
-      body+=`<div class="stitle">${cat.label}</div><table class="rt"><thead><tr><th>Rasyo</th><th>Değer</th><th>İdeal</th><th>Durum</th></tr></thead><tbody>`;
+      body+=`<div class="stitle">${cat.label}</div><table class="rt"><colgroup><col style="width:38%"><col style="width:20%"><col style="width:22%"><col style="width:20%"></colgroup><thead><tr><th style="text-align:left">Rasyo</th><th>Değer</th><th>İdeal</th><th>Durum</th></tr></thead><tbody>`;
       items.forEach(r=>{
         const val=r.pct?fP2(r.value):r.cur?fC2(r.value):fR2(r.value);
         const cls=rCls(r.key,r.value);
@@ -3005,7 +3005,7 @@ function raporOnizle(){
       <div class="sbox ${kCls}"><div class="snum">${kSkor??'—'}</div><div class="slbl">Kredi Skoru</div></div>
       <div class="sbox ${zCls}"><div class="snum">${zScore!==null?zScore.toFixed(2):'—'}</div><div class="slbl">Altman Z-Score<br><small>${zLbl}</small></div></div>
     </div>`;
-    body+=`<div class="stitle">BDDK Kriter Değerlendirmesi</div><table class="rt"><thead><tr><th>Kriter</th><th>Değer</th><th>İdeal</th><th>Durum</th></tr></thead><tbody>`;
+    body+=`<div class="stitle">BDDK Kriter Değerlendirmesi</div><table class="rt"><colgroup><col style="width:36%"><col style="width:20%"><col style="width:20%"><col style="width:24%"></colgroup><thead><tr><th style="text-align:left">Kriter</th><th>Değer</th><th>İdeal</th><th>Durum</th></tr></thead><tbody>`;
     kriterler.forEach(k=>{
       const cls=k.v===null?'neu':k.iyi(k.v)?'good':k.orta(k.v)?'mid':'bad';
       const lbl={good:'✓ Uygun',mid:'△ Sınırda',bad:'✗ Yetersiz',neu:'— Veri Yok'}[cls];
@@ -3025,15 +3025,23 @@ function raporOnizle(){
   // ── KARŞILAŞTIRMA
   if(incCompare&&S.periods.length>=2){
     const aR2=Object.values(RATIOS).flatMap(c=>c.items);
+    const pCount=S.periods.length;
+    // Sütun genişlikleri: rasyo adı sabit, dönem sütunları eşit
+    const rasyoW=38; // %
+    const donemW=Math.floor((62)/pCount); // kalan % eşit paylaşım
+    const colDefs=`<col style="width:${rasyoW}%">${S.periods.map(()=>`<col style="width:${donemW}%">`).join('')}`;
     body+=`<div class="page"><div class="ph"><div class="ph-title">Dönemsel Karşılaştırma</div><div class="ph-sub">${sirket}</div></div><div class="pb">`;
-    body+=`<table class="rt"><thead><tr><th>Rasyo</th>${S.periods.map(pp=>`<th>${pp.name||'Dönem'}</th>`).join('')}</tr></thead><tbody>`;
+    body+=`<table class="rt" style="table-layout:fixed;width:100%"><colgroup>${colDefs}</colgroup><thead><tr>
+      <th style="text-align:left">Rasyo</th>
+      ${S.periods.map(pp=>`<th style="text-align:right;white-space:nowrap">${pp.name||'Dönem'}</th>`).join('')}
+    </tr></thead><tbody>`;
     aR2.forEach(r=>{
       const vals=S.periods.map(pp=>r.calc(nd(pp)));
       if(vals.every(v=>v===null))return;
-      body+=`<tr><td class="rn">${r.name}</td>${vals.map((v,i)=>{
+      body+=`<tr><td class="rn" style="overflow:hidden;text-overflow:ellipsis">${r.name}</td>${vals.map((v,i)=>{
         const fmt=v===null?'—':r.pct?fP2(v):r.cur?fC2(v):fR2(v);
         const cls=v!==null?rCls(r.key,v):'neu';
-        return`<td class="rv ${cls}">${fmt}</td>`;
+        return`<td class="rv ${cls}" style="text-align:right;white-space:nowrap">${fmt}</td>`;
       }).join('')}</tr>`;
     });
     body+=`</tbody></table></div></div>`;
@@ -3094,15 +3102,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#1e293
 .stitle{font-size:9pt;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #dbeafe}
 
 /* TABLO */
-.rt{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:14px}
+.rt{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:14px;table-layout:fixed}
 .rt thead tr{background:#1e3a5f;color:#fff}
-.rt th{padding:7px 10px;font-size:7.5pt;font-weight:600;text-align:left}
-.rt th:nth-child(2),.rt td:nth-child(2){text-align:right}
+.rt th{padding:7px 10px;font-size:7.5pt;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden}
+.rt th:first-child{text-align:left}
 .rt tbody tr:nth-child(even){background:#f8fafc}
 .rt tbody tr:hover{background:#eff6ff}
-.rt td{padding:6px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
-.rn{font-weight:500;color:#1e293b}.rf{display:block;font-size:7pt;color:#94a3b8;font-family:monospace;font-weight:400}.ri{font-size:8pt;color:#94a3b8}.rs{font-size:8pt;font-weight:600;text-align:center}
-.rv{font-weight:700;text-align:right}
+.rt td{padding:6px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle;text-align:center;white-space:nowrap;overflow:hidden}
+.rn{font-weight:500;color:#1e293b;text-align:left!important;white-space:normal!important;word-break:break-word}.rf{display:block;font-size:7pt;color:#94a3b8;font-family:monospace;font-weight:400}.ri{font-size:8pt;color:#94a3b8;text-align:center!important}.rs{font-size:8pt;font-weight:600;text-align:center!important}
+.rv{font-weight:700;text-align:center!important}
 .good{color:#16a34a}.mid{color:#d97706}.bad{color:#dc2626}.neu{color:#64748b}
 .rs.good{color:#16a34a}.rs.mid{color:#d97706}.rs.bad{color:#dc2626}
 
