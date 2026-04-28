@@ -1422,27 +1422,29 @@ function rCmp(el){
     items.forEach(r=>{
       const vals=datalar.map(d=>r.calc(d));
       if(vals.every(v=>v===null))return;
-      const fmt=v=>v===null?'—':r.pct?fP(v):r.cur?fC(v):fR(v);
+      // cur:1 rasyolarda (FAVÖK, NİS) kısa format kullan — taşmayı önler
+      const fmtV=v=>v===null?'—':r.pct?fP(v):r.cur?fCS(v)+'₺':fR(v);
       const geçerli=vals.filter(v=>v!==null);
       const ilk=geçerli[0]??0, son=geçerli[geçerli.length-1]??0;
       const delta=son-ilk;
       const deltaPct=ilk!==0?(delta/Math.abs(ilk)*100):null;
       const dCol=delta>0?'#a78bfa':delta<0?'var(--t1)':'var(--t3)';
       h+=`<tr>
-        <td style="font-size:11px;font-weight:500">${r.name}</td>
+        <td style="font-size:11px;font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name}</td>
         ${vals.map((v,vi)=>{
           const prev=vi>0?vals[vi-1]:null;
           const d2=v!==null&&prev!==null?v-prev:null;
           const d2Col=d2===null?'':d2>0?'#a78bfa':'var(--t1)';
           const d2Pct=d2!==null&&prev!==null&&prev!==0?(d2/Math.abs(prev)*100):null;
+          // cur rasyolarda da yüzdesel delta göster
           const d2Txt=d2!==null&&Math.abs(d2)>0.01
-            ?`<span style="font-size:9px;color:${d2Col};margin-left:4px">${d2>0?'▲':'▼'}${(r.pct||r.cur)?d2Pct!==null?Math.abs(d2Pct).toFixed(1)+'%':'—':fR(Math.abs(d2))}</span>`
+            ?`<span style="font-size:9px;color:${d2Col};margin-left:3px">${d2>0?'▲':'▼'}${(r.pct||r.cur)?d2Pct!==null?Math.abs(d2Pct).toFixed(1)+'%':'—':fR(Math.abs(d2))}</span>`
             :'';
-          return`<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${rColS(r.key,v)}">${fmt(v)}${d2Txt}</td>`;
+          return`<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${rColS(r.key,v)};white-space:nowrap">${fmtV(v)}${d2Txt}</td>`;
         }).join('')}
         ${bilanconlar.length>=2?`
-          <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${dCol}">${geçerli.length>=2?(delta>0?'+':'')+fmt(delta):'—'}</td>
-          <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${dCol}">${deltaPct!==null?(delta>0?'+':'')+deltaPct.toFixed(1)+'%':'—'}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${dCol};white-space:nowrap">${deltaPct!==null?(delta>0?'+':'')+deltaPct.toFixed(1)+'%':'—'}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${dCol};white-space:nowrap">${deltaPct!==null?(delta>0?'+':'')+deltaPct.toFixed(1)+'%':'—'}</td>
         `:''}
       </tr>`;
     });
