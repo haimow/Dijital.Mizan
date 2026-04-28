@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dijital Mizan — Akıllı Finansal Analiz</title>
+<title>Mizan Mind — Yapay Zeka Destekli Finansal Analiz</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233b82f6'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='18' font-weight='bold'>F</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
@@ -597,10 +597,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
   <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 60% 20%,var(--acd) 0%,transparent 60%),radial-gradient(ellipse at 20% 80%,rgba(139,92,246,.06) 0%,transparent 55%);pointer-events:none"></div>
   <div class="auth-box">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
-      <div class="auth-logo">D</div>
+      <div class="auth-logo">M</div>
       <div>
-        <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">Dijital Mizan</div>
-        <div style="font-size:10px;color:var(--tm);font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase">Akıllı Finansal Analiz</div>
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">Mizan Mind</div>
+        <div style="font-size:10px;color:var(--tm);font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase">Yapay Zeka Destekli Finansal Analiz</div>
       </div>
     </div>
     <div style="font-size:12px;color:var(--t2);margin-bottom:24px;line-height:1.7;padding:12px 14px;background:var(--acd);border:1px solid rgba(59,130,246,.2);border-radius:8px">
@@ -671,7 +671,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--t1);min-
 
 <div class="app" id="app" style="display:none">
 <div class="sidebar" id="sidebar">
-<div class="sb-brand"><div class="brand-i">D</div><div><div class="brand-n">Dijital Mizan</div><div class="brand-s">Akıllı Finansal Analiz</div></div></div>
+<div class="sb-brand"><div class="brand-i">M</div><div><div class="brand-n">Mizan Mind</div><div class="brand-s">Yapay Zeka Destekli Finansal Analiz</div></div></div>
 <div class="sb-tabs"><button class="sb-tab on" data-st="formulas" onclick="sSTab('formulas')">📐 Formüller</button><button class="sb-tab" data-st="charts" onclick="sSTab('charts')">📊 Grafikler</button><button class="sb-tab" data-st="saved" onclick="sSTab('saved')">💾 Kayıtlı</button></div>
 <div class="sb-scroll" id="sbCont"></div>
 <div class="userbar" id="userBar">
@@ -974,6 +974,7 @@ function parseTR(s){
   return parseFloat(s);
 }
 function r2(v){return v?String(Math.round(v*100)/100):''}
+function fmtTR(n){if(!n&&n!==0)return '';const abs=Math.abs(n);const str=new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(abs);return n<0?'-'+str:str;}
 function pF(v){return parseFloat(v)||0}
 function fR(v){return v!=null&&!isNaN(v)?v.toFixed(2):"—"}
 function fP(v){return v!=null&&!isNaN(v)?v.toFixed(2)+"%":"—"}
@@ -1264,7 +1265,7 @@ if(p.isMizan){
 }else{
   // Normal manuel giriş
   h+=`<div class="card"><div class="card-h"><div class="card-t">✏️ Manuel Giriş${p.name?' — '+p.name:''}</div><button class="btn btn-g" onclick="sTab('ratios')">Rasyoları Hesapla →</button></div><div class="card-b">`;
-  FIELDS.forEach(s=>{h+=`<div class="st">${s.section}</div><div class="ig">`;s.fields.forEach(f=>{const v=p.data[f.key]||'';const n=parseTR(v);const hasVal=!isNaN(n)&&n!==0&&v!=='';const disp=hasVal?fC(n):'';const isMissing=p.missingFields&&p.missingFields.includes(f.key)&&p.fileName;h+=`<div class="igr"><label class="igl">${f.label} ${disp?`<span style="color:var(--gn);font-size:9px">${disp}</span>`:isMissing?`<span style="color:var(--rd);font-size:9px">⚠ Okunamadı</span>`:''}</label><input class="inp ${hasVal?'filled':''} ${isMissing?'missing':''}" value="${v}" placeholder="0,00 ₺" onchange="uF('${f.key}',this.value)" oninput="uF('${f.key}',this.value)"></div>`});h+=`</div>`});
+  FIELDS.forEach(s=>{h+=`<div class="st">${s.section}</div><div class="ig">`;s.fields.forEach(f=>{const v=p.data[f.key]||'';const n=parseTR(v);const hasVal=!isNaN(n)&&n!==0&&v!=='';const disp=hasVal?fC(n):'';const isMissing=p.missingFields&&p.missingFields.includes(f.key)&&p.fileName;h+=`<div class="igr"><label class="igl">${f.label} ${disp?`<span style="color:var(--gn);font-size:9px">${disp}</span>`:isMissing?`<span style="color:var(--rd);font-size:9px">⚠ Okunamadı</span>`:''}</label><input class="inp ${hasVal?'filled':''} ${isMissing?'missing':''}" value="${hasVal?fmtTR(n):''}" placeholder="0,00 ₺" onchange="uF('${f.key}',this.value)" oninput="uF('${f.key}',this.value)"></div>`});h+=`</div>`});
   h+=`</div></div>`;
 }
 
@@ -1316,7 +1317,7 @@ function rCmp(el){
       const son=vals.filter(v=>v!==null).pop()??0;
       const delta=son-ilk;
       const deltaPct=ilk!==0?(delta/Math.abs(ilk)*100):null;
-      const dCol=delta>0?'#a78bfa':delta<0?'rgba(255,255,255,.75)':'var(--t3)';
+      const dCol=delta>0?'#a78bfa':delta<0?'var(--t1)':'var(--t3)';
       h+=`<tr>
         <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ac)">${k}</td>
         <td style="font-size:11px">${ad}</td>
@@ -1362,7 +1363,7 @@ function rCmp(el){
       const ilk=geçerli[0]??0, son=geçerli[geçerli.length-1]??0;
       const delta=son-ilk;
       const deltaPct=ilk!==0?(delta/Math.abs(ilk)*100):null;
-      const dCol=delta>0?'#a78bfa':delta<0?'rgba(255,255,255,.75)':'var(--t3)';
+      const dCol=delta>0?'#a78bfa':delta<0?'var(--t1)':'var(--t3)';
 
       h+=`<tr>
         <td style="font-size:11px;font-weight:500">${r.name}</td>
@@ -1370,7 +1371,7 @@ function rCmp(el){
           // Ardışık dönemler arası küçük delta göster
           const prev=vi>0?vals[vi-1]:null;
           const d2=v!==null&&prev!==null?v-prev:null;
-          const d2Col=d2===null?'':d2>0?'#a78bfa':'rgba(255,255,255,.75)';
+          const d2Col=d2===null?'':d2>0?'#a78bfa':'var(--t1)';
           // cur:1 rasyolarda (FAVÖK, NİS) da yüzdesel delta göster
           const d2Pct=d2!==null&&prev!==null&&prev!==0?(d2/Math.abs(prev)*100):null;
           const d2Txt=d2!==null&&Math.abs(d2)>0.01
@@ -1578,7 +1579,7 @@ let _authMode = 'login';
 function getGoTrue(){
   if(_goTrue) return _goTrue;
   _goTrue = new GoTrue({
-    APIUrl: 'https://dijitalmizan.netlify.app/.netlify/identity',
+    APIUrl: 'https://mizanmind.netlify.app/.netlify/identity',
     setCookie: true,
   });
   return _goTrue;
@@ -2959,7 +2960,7 @@ function raporOnizle(){
   // ── KAPAK
   body+=`<div class="page cover-page">
     <div class="cover-header">
-      <span class="brand">Dijital Mizan <span class="brand-pro">PRO</span></span>
+      <span class="brand">Mizan Mind <span class="brand-pro">PRO</span></span>
       ${logoHtml?`<div class="cover-logo">${logoHtml}</div>`:'<span class="cover-badge">Finansal Analiz Raporu</span>'}
     </div>
     <div class="cover-center">
@@ -2970,9 +2971,9 @@ function raporOnizle(){
       <div class="cover-cell"><div class="cell-label">Dönem</div><div class="cell-val">${donem||'—'}</div></div>
       <div class="cover-cell"><div class="cell-label">Tarih</div><div class="cell-val">${tarih}</div></div>
       <div class="cover-cell"><div class="cell-label">Hazırlayan</div><div class="cell-val">${hazirlayan||'—'}</div></div>
-      <div class="cover-cell"><div class="cell-label">Platform</div><div class="cell-val">Dijital Mizan</div></div>
+      <div class="cover-cell"><div class="cell-label">Platform</div><div class="cell-val">Mizan Mind</div></div>
     </div>
-    <div class="cover-footer">Bu rapor Dijital Mizan platformu tarafından otomatik oluşturulmuştur. Yatırım tavsiyesi niteliği taşımaz.</div>
+    <div class="cover-footer">Bu rapor Mizan Mind platformu tarafından otomatik oluşturulmuştur. Yatırım tavsiyesi niteliği taşımaz.</div>
   </div>`;
 
   // ── RASYOLAR
@@ -3055,7 +3056,7 @@ function raporOnizle(){
   const win=window.open('','_blank','width=960,height=750');
   win.document.write(`<!DOCTYPE html><html lang="tr"><head>
 <meta charset="UTF-8">
-<title>Dijital Mizan — Akıllı Finansal Analiz</title>
+<title>Mizan Mind — Yapay Zeka Destekli Finansal Analiz</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;font-size:10pt;line-height:1.5}
