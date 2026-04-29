@@ -600,6 +600,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:var(--t1);min-he
 
 /* SAVE BTN */
 .btn-save-anim{animation:savePulse .6s ease}@keyframes savePulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.cl-row{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--brd);margin-bottom:6px;cursor:pointer;transition:all .18s;background:var(--bg2)}.cl-row:hover{border-color:var(--brd2);background:var(--bg2h)}.cl-chk{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--brd);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .18s}.cl-p-yuksek{font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(239,68,68,.1);color:var(--rd);font-weight:600;letter-spacing:.3px;flex-shrink:0}.cl-bolum-h{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg0);border-radius:7px;margin-bottom:6px;cursor:pointer}.cl-note{width:100%;background:transparent;border:none;outline:none;font-size:11px;color:var(--t2);font-family:'Inter',sans-serif;resize:none;margin-top:6px;padding:6px 8px;border-radius:5px;border:1px solid transparent;transition:border-color .2s}.cl-note:focus{border-color:var(--brd);background:var(--bgi)}.cl-note::placeholder{color:var(--t3)}
 </style>
 </head>
 <body>
@@ -4443,16 +4444,7 @@ function rChecklist(el) {
   const s=clStats(aktif);
   const pctRenk=s.pct===100?'var(--gn)':s.pct>=60?'var(--am)':'var(--ac)';
 
-  let h=`<style>
-  .cl-row{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--brd);margin-bottom:6px;cursor:pointer;transition:all .18s;background:var(--bg2)}
-  .cl-row:hover{border-color:var(--brd2);background:var(--bg2h)}
-  .cl-chk{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--brd);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .18s}
-  .cl-p-yuksek{font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(239,68,68,.1);color:var(--rd);font-weight:600;letter-spacing:.3px;flex-shrink:0}
-  .cl-bolum-h{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg0);border-radius:7px;margin-bottom:6px;cursor:pointer}
-  .cl-note{width:100%;background:transparent;border:none;outline:none;font-size:11px;color:var(--t2);font-family:'Inter',sans-serif;resize:none;margin-top:6px;padding:6px 8px;border-radius:5px;border:1px solid transparent;transition:border-color .2s}
-  .cl-note:focus{border-color:var(--brd);background:var(--bgi)}
-  .cl-note::placeholder{color:var(--t3)}
-  </style>`;
+  let h=``;
 
   // ── Sekme listesi ──
   h+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">`;
