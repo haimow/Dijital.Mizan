@@ -3023,125 +3023,88 @@ function clearLogo(){
 // ─── PDF RAPOR (HTML Print) ───────────────────────────────────────────────────
 function rRapor(el){
   const p=S.periods[S.ap];
-  const has=Object.values(p.data).some(v=>v&&v!=='0');
-  let h=`<div class="card"><div class="card-h"><div class="card-t">📄 PDF Rapor Oluştur${p.name?' — '+p.name:''}</div></div><div class="card-b">`;
+  let h=`<div class="card"><div class="card-h"><div class="card-t">📄 PDF Rapor Oluştur</div></div><div class="card-b">`;
 
-  if(!has&&!p.isMizan){
-    h+=`<div style="text-align:center;color:var(--tm);padding:36px">Önce <b>Veri Girişi</b> sekmesinden veri yükleyin.</div></div></div>`;
-    el.innerHTML=h;return;
+  // Bilanço/Beyanname dönemlerini bul (mizan HARİÇ)
+  const bilancoDonemler = S.periods.filter(p=>
+    !p.isMizan && Object.values(p.data).some(v=>v&&v!=='0')
+  );
+  const mizanDonemler = S.periods.filter(p=>p.isMizan);
+
+  // Hiç bilanço verisi yok
+  if(bilancoDonemler.length===0){
+    if(mizanDonemler.length>0){
+      // Sadece mizan var
+      h+=`<div style="text-align:center;padding:36px 20px">
+        <div style="font-size:36px;margin-bottom:12px">📋</div>
+        <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:8px">Detay Mizan için PDF Raporu Mevcut Değil</div>
+        <div style="font-size:11px;color:var(--t2);line-height:1.8;max-width:420px;margin:0 auto">
+          PDF raporu yalnızca <b>Bilanço</b> ve <b>Gelir Tablosu</b> (kurumlar beyannamesi, bilanço özeti vb.) içeren dönemler için oluşturulabilir.<br><br>
+          Detay Mizan analiz sonuçlarını görmek için <b>🔍 Detay Mizan</b> ve <b>⚖️ Karşılaştırma</b> sekmelerini kullanın.
+        </div>
+        <button class="btn btn-p" onclick="sTab('detay')" style="margin-top:16px">🔍 Detay Mizan Analizine Git</button>
+      </div>`;
+    } else {
+      h+=`<div style="text-align:center;color:var(--tm);padding:36px">
+        Önce <b>Veri Girişi</b> sekmesinden Bilanço veya Gelir Tablosu yükleyin.
+      </div>`;
+    }
+    h+=`</div></div>`; el.innerHTML=h; return;
   }
 
-  // ── Dönemleri tip bazında grupla ─────────────────────────────────────────
-  const mizanDonemler  = S.periods.filter(p=>p.isMizan && Object.values(p.mizanAccts||{}).length>0);
-  const bilancoDonemler= S.periods.filter(p=>!p.isMizan && Object.values(p.data).some(v=>v&&v!=='0') &&
-    (p.data.totalAssets||p.data.currentAssets||p.data.equity));
-  const gelirDonemler  = S.periods.filter(p=>!p.isMizan && Object.values(p.data).some(v=>v&&v!=='0') &&
-    (p.data.netSales||p.data.grossProfit||p.data.netProfit));
-
-  // Karma kontrol — aynı raporda mizan + bilanço karıştırılamaz
-  const aktifTipler = [
-    mizanDonemler.length>0  ? 'mizan'   : null,
-    bilancoDonemler.length>0? 'bilanco' : null,
-  ].filter(Boolean);
-
-  // Tip uyarısı
-  if(mizanDonemler.length>0 && bilancoDonemler.length>0){
-    h+=`<div style="padding:14px 16px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:600;color:var(--am);margin-bottom:6px">⚠️ Karma Veri Tipi Tespit Edildi</div>
-      <div style="font-size:11px;color:var(--t2);line-height:1.7">
-        Yüklenen dönemler arasında hem <b>Detay Mizan</b> hem de <b>Bilanço/Gelir Tablosu</b> türünde veri var.<br>
-        PDF raporu yalnızca aynı tipten verilerle oluşturulabilir. Lütfen rapor tipini seçin:
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn btn-p" onclick="S._raporTip='mizan';rRapor(document.getElementById('cont'))" style="font-size:11px">📋 Sadece Mizan Analizi</button>
-        <button class="btn btn-p" onclick="S._raporTip='bilanco';rRapor(document.getElementById('cont'))" style="font-size:11px">📊 Sadece Bilanço Analizi</button>
-      </div>
+  // Mizan dönemleri de varsa bilgilendirme
+  if(mizanDonemler.length>0){
+    h+=`<div style="padding:10px 14px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:14px;font-size:11px;color:var(--am)">
+      ℹ️ ${mizanDonemler.length} Detay Mizan dönemi PDF raporuna dahil edilmez — yalnızca ${bilancoDonemler.length} Bilanço/Beyanname dönemi raporlanır.
     </div>`;
   }
 
-  // Aktif tip belirle
-  const raporTip = S._raporTip ||
-    (mizanDonemler.length>0 && bilancoDonemler.length===0 ? 'mizan' :
-     bilancoDonemler.length>0 ? 'bilanco' : 'bilanco');
+  // Aktif dönem
+  const aktifP = bilancoDonemler.find(x=>x===p) || bilancoDonemler[0];
+  const aktifDonemler = bilancoDonemler;
 
-  const aktifDonemler = raporTip==='mizan' ? mizanDonemler : bilancoDonemler;
-  const aktifP = aktifDonemler.find(x=>x===p) || aktifDonemler[0] || p;
+  const hasRasyo = aktifDonemler.some(p=>Object.values(RATIOS).flatMap(c=>c.items).some(r=>r.calc(nd(p))!==null));
+  const hasKredi = aktifDonemler.some(p=>nd(p).totalAssets&&nd(p).totalLiabilities);
+  const hasCmp   = aktifDonemler.length>=2;
 
-  // ── MİZAN raporu ─────────────────────────────────────────────────────────
-  if(raporTip==='mizan'){
-    h+=`<div style="padding:12px 16px;background:var(--acd);border:1px solid rgba(59,130,246,.2);border-radius:8px;margin-bottom:16px;font-size:11px;color:var(--t2);line-height:1.7">
-      <b style="color:var(--t1)">📋 Detay Mizan Raporu</b><br>
-      ${mizanDonemler.length} dönem · Hesap bakiyeleri, anomali tespiti ve risk analizi içerir.<br>
-      <span style="color:var(--am)">Not: Mizan raporunda rasyo hesabı yapılamaz.</span>
+  h+=`<div style="padding:10px 14px;background:var(--acd);border:1px solid rgba(59,130,246,.15);border-radius:8px;margin-bottom:16px;font-size:11px;color:var(--t2);line-height:1.6">
+    <b style="color:var(--t1)">📊 Bilanço & Gelir Tablosu Raporu</b> · ${aktifDonemler.length} dönem
+  </div>
+
+  <div style="margin-bottom:20px">
+    <div style="font-size:11px;color:var(--t2);margin-bottom:12px">Rapora eklenecek bölümler:</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${hasRasyo?'pointer':'default'};opacity:${hasRasyo?1:.4}">
+        <input type="checkbox" id="rpr_ratios" ${hasRasyo?'checked':''} ${hasRasyo?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
+        <span style="font-size:12px">📊 Finansal Rasyolar</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${hasKredi?'pointer':'default'};opacity:${hasKredi?1:.4}">
+        <input type="checkbox" id="rpr_kredi" ${hasKredi?'checked':''} ${hasKredi?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
+        <span style="font-size:12px">🏦 Kredi Analizi</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${hasCmp?'pointer':'default'};opacity:${hasCmp?1:.4}">
+        <input type="checkbox" id="rpr_compare" ${hasCmp?'checked':''} ${hasCmp?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
+        <span style="font-size:12px">⚖️ Dönemsel Karşılaştırma</span>
+        ${!hasCmp?`<span style="font-size:9px;color:var(--tm);margin-left:auto">2+ dönem gerekli</span>`:''}
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${!!S.aiRes?'pointer':'default'};opacity:${!!S.aiRes?1:.4}">
+        <input type="checkbox" id="rpr_ai" ${S.aiRes?'checked':''} ${S.aiRes?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
+        <span style="font-size:12px">🤖 AI Uzman Yorum</span>
+        ${!S.aiRes?`<span style="font-size:9px;color:var(--tm);margin-left:auto">Önce AI yorum oluşturun</span>`:''}
+      </label>
     </div>
-    <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:var(--t2);margin-bottom:12px">Rapora eklenecek bölümler:</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:pointer">
-          <input type="checkbox" id="rpr_mizan_bakiye" checked style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">📊 Hesap Bakiyeleri</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:pointer">
-          <input type="checkbox" id="rpr_mizan_anomali" checked style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">⚠️ Anomali & Risk Analizi</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${mizanDonemler.length>=2?'pointer':'default'};opacity:${mizanDonemler.length>=2?1:.4}">
-          <input type="checkbox" id="rpr_mizan_compare" ${mizanDonemler.length>=2?'checked':''} ${mizanDonemler.length>=2?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">⚖️ Dönemsel Karşılaştırma</span>
-          ${mizanDonemler.length<2?`<span style="font-size:9px;color:var(--tm);margin-left:auto">2+ dönem gerekli</span>`:''}
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${!!S.aiRes?'pointer':'default'};opacity:${!!S.aiRes?1:.4}">
-          <input type="checkbox" id="rpr_mizan_ai" ${S.aiRes?'checked':''} ${S.aiRes?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">🤖 AI Uzman Yorum</span>
-          ${!S.aiRes?`<span style="font-size:9px;color:var(--tm);margin-left:auto">Önce AI yorum oluşturun</span>`:''}
-        </label>
-      </div>
-    </div>`;
-  } else {
-    // ── BİLANÇO / GELİR TABLOSU raporu ────────────────────────────────────
-    const hasRasyo = aktifDonemler.some(p=>Object.values(RATIOS).flatMap(c=>c.items).some(r=>r.calc(nd(p))!==null));
-    const hasKredi = aktifDonemler.some(p=>nd(p).totalAssets&&nd(p).totalLiabilities);
-    const hasCmp   = aktifDonemler.length>=2;
+  </div>
 
-    h+=`<div style="padding:12px 16px;background:var(--acd);border:1px solid rgba(59,130,246,.2);border-radius:8px;margin-bottom:16px;font-size:11px;color:var(--t2);line-height:1.7">
-      <b style="color:var(--t1)">📊 Bilanço & Gelir Tablosu Raporu</b><br>
-      ${aktifDonemler.length} dönem · Finansal rasyolar, kredi analizi ve karşılaştırma içerir.
-    </div>
-    <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:var(--t2);margin-bottom:12px">Rapora eklenecek bölümler:</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${hasRasyo?'pointer':'default'};opacity:${hasRasyo?1:.4}">
-          <input type="checkbox" id="rpr_ratios" ${hasRasyo?'checked':''} ${hasRasyo?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">📊 Finansal Rasyolar</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${hasKredi?'pointer':'default'};opacity:${hasKredi?1:.4}">
-          <input type="checkbox" id="rpr_kredi" ${hasKredi?'checked':''} ${hasKredi?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">🏦 Kredi Analizi</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${hasCmp?'pointer':'default'};opacity:${hasCmp?1:.4}">
-          <input type="checkbox" id="rpr_compare" ${hasCmp?'checked':''} ${hasCmp?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">⚖️ Dönemsel Karşılaştırma</span>
-          ${!hasCmp?`<span style="font-size:9px;color:var(--tm);margin-left:auto">2+ dönem gerekli</span>`:''}
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${!!S.aiRes?'pointer':'default'};opacity:${!!S.aiRes?1:.4}">
-          <input type="checkbox" id="rpr_ai" ${S.aiRes?'checked':''} ${S.aiRes?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
-          <span style="font-size:12px">🤖 AI Uzman Yorum</span>
-          ${!S.aiRes?`<span style="font-size:9px;color:var(--tm);margin-left:auto">Önce AI yorum oluşturun</span>`:''}
-        </label>
-      </div>
-    </div>`;
-  }
-
-  // ── Ortak alanlar: rapor bilgileri + logo ────────────────────────────────
-  h+=`<div style="margin-bottom:20px"><div style="font-size:11px;color:var(--t2);margin-bottom:10px">Rapor Bilgileri</div>
+  <div style="margin-bottom:20px"><div style="font-size:11px;color:var(--t2);margin-bottom:10px">Rapor Bilgileri</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    <div class="igr"><label class="igl">Şirket Adı</label><input class="inp" id="rpr_sirket" placeholder="ABC Ticaret A.Ş." value="${aktifP.fileName?.replace(/\.[^/.]+$/,'')||''}"></div>
+    <div class="igr"><label class="igl">Şirket Adı</label><input class="inp" id="rpr_sirket" placeholder="ABC Ticaret A.Ş." value="${aktifP?.fileName?.replace(/\.[^/.]+$/,'')||''}"></div>
     <div class="igr"><label class="igl">Hazırlayan</label><input class="inp" id="rpr_hazirlayan" placeholder="Mali Müşavir Adı"></div>
-    <div class="igr"><label class="igl">Dönem</label><input class="inp" id="rpr_donem" value="${aktifP.name||''}" placeholder="2024"></div>
+    <div class="igr"><label class="igl">Dönem</label><input class="inp" id="rpr_donem" value="${aktifP?.name||''}" placeholder="2024"></div>
     <div class="igr"><label class="igl">Rapor Tarihi</label><input class="inp" id="rpr_tarih" value="${new Date().toLocaleDateString('tr-TR')}"></div>
   </div></div>
+
   <div style="margin-bottom:20px">
-    <div style="font-size:11px;color:var(--t2);margin-bottom:10px">Firma Logosu <span style="color:var(--tm);font-size:9px">(isteğe bağlı — arka plan otomatik silinir)</span></div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:10px">Firma Logosu <span style="color:var(--tm);font-size:9px">(isteğe bağlı)</span></div>
     <div style="display:flex;align-items:center;gap:12px">
       <div id="logoPreviewBox" style="width:80px;height:50px;background:var(--bgi);border:1px dashed var(--brd);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--tm);overflow:hidden;cursor:pointer" onclick="document.getElementById('rpr_logo_inp').click()">
         ${S.logoDataUrl?`<img src="${S.logoDataUrl}" style="max-width:76px;max-height:46px;object-fit:contain">`:'Logo Yükle'}
@@ -3154,35 +3117,26 @@ function rRapor(el){
       </div>
     </div>
   </div>
+
   <div style="padding:10px 14px;background:var(--acd);border:1px solid rgba(59,130,246,.15);border-radius:7px;font-size:11px;color:var(--t2);margin-bottom:16px;line-height:1.7">
     💡 Önizleme açıldığında tarayıcının yazdır penceresinde <b>Hedef → PDF olarak kaydet</b> seçin. Chrome/Edge önerilir.
   </div>
   <button class="btn btn-p" onclick="raporOnizle()" style="font-size:12px;padding:9px 20px">👁 Önizle &amp; PDF İndir</button>`;
+
   h+=`</div></div>`;
   el.innerHTML=h;
-}
 
 function raporOnizle(){
-  const raporTip = S._raporTip ||
-    (S.periods.some(p=>p.isMizan&&Object.values(p.mizanAccts||{}).length>0) &&
-     !S.periods.some(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0')) ? 'mizan' : 'bilanco');
-
-  if(raporTip==='mizan'){
-    raporOnizleMizan(); return;
-  }
-
-  // ── Bilanço/Gelir Tablosu raporu ─────────────────────────────────────────
-  // Sadece bilanço dönemlerini kullan
-  const aktifDonemler = S.periods.filter(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0'));
+  // Sadece bilanço/beyanname dönemleri
+  const aktifDonemler = S.periods.filter(p=>
+    !p.isMizan && Object.values(p.data).some(v=>v&&v!=='0')
+  );
   if(!aktifDonemler.length){ showToast('Bilanço/Gelir Tablosu verisi bulunamadı','error'); return; }
 
-  // Aktif dönemi bilanço dönemlerinin ilkiyle değiştir (rasyolar için)
   const _origAP = S.ap;
-  // Geçici olarak ilk bilanço dönemini aktif yap
   const bilancoIdx = S.periods.indexOf(aktifDonemler[0]);
   S.ap = bilancoIdx;
-
-  const p=S.periods[S.ap];const d=nd(p);
+  const p=S.periods[S.ap]; const d=nd(p);
   const sirket=document.getElementById('rpr_sirket')?.value||'';
   const hazirlayan=document.getElementById('rpr_hazirlayan')?.value||'';
   const donem=document.getElementById('rpr_donem')?.value||p.name||'';
@@ -3342,59 +3296,58 @@ function raporOnizle(){
 <title>Mizan Mind — Yapay Zeka Destekli Finansal Analiz</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;font-size:10pt;line-height:1.5}
-.page{background:#fff;width:210mm;min-height:297mm;margin:0 auto 8mm;padding:18mm 18mm 16mm;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative;page-break-after:always}
+body{font-family:'Inter',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;font-size:9pt;line-height:1.5}
+.page{background:#fff;width:210mm;min-height:297mm;margin:0 auto 8mm;padding:14mm 14mm 12mm;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative;page-break-after:always}
 
 /* KAPAK */
-.cover-page{background:linear-gradient(160deg,#0f172a 0%,#1e3a5f 60%,#0f172a 100%);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:18mm}
+.cover-page{background:linear-gradient(160deg,#0f172a 0%,#1e3a5f 60%,#0f172a 100%);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:16mm}
 .cover-header{display:flex;justify-content:space-between;align-items:center}
-.brand{font-size:20pt;font-weight:800;color:#fff;letter-spacing:-1px}.brand-pro{color:#3b82f6}
-.cover-badge{font-size:8pt;color:#93c5fd;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(147,197,253,.3);padding:4px 10px;border-radius:20px}
-.cover-center{flex:1;display:flex;flex-direction:column;justify-content:center;padding:12mm 0 8mm}
-.cover-eyebrow{font-size:8pt;letter-spacing:4px;text-transform:uppercase;color:#64748b;margin-bottom:10px}
-.cover-company{font-size:28pt;font-weight:800;line-height:1.1;margin-bottom:6px;color:#f8fafc}
-.cover-sector{font-size:13pt;color:#93c5fd;font-weight:400}
-.cover-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:8mm}
-.cover-cell{}.cell-label{font-size:7pt;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.cell-val{font-size:10pt;font-weight:600;color:#e2e8f0}
-.cover-footer{font-size:7pt;color:#475569;margin-top:5mm;padding-top:4mm;border-top:1px solid rgba(255,255,255,.06)}
-.cover-logo{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:center}
-.footnote{font-size:7pt;color:#94a3b8;margin-top:12mm;padding-top:4mm;border-top:1px solid #e2e8f0;line-height:1.6}
+.brand{font-size:18pt;font-weight:800;color:#fff;letter-spacing:-1px}.brand-pro{color:#3b82f6}
+.cover-badge{font-size:7pt;color:#93c5fd;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(147,197,253,.3);padding:3px 8px;border-radius:16px}
+.cover-center{flex:1;display:flex;flex-direction:column;justify-content:center;padding:10mm 0 6mm}
+.cover-eyebrow{font-size:7pt;letter-spacing:4px;text-transform:uppercase;color:#64748b;margin-bottom:8px}
+.cover-company{font-size:24pt;font-weight:800;line-height:1.1;margin-bottom:6px;color:#f8fafc}
+.cover-sector{font-size:12pt;color:#93c5fd;font-weight:400}
+.cover-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:6mm}
+.cover-cell{}.cell-label{font-size:6pt;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.cell-val{font-size:9pt;font-weight:600;color:#e2e8f0}
+.cover-footer{font-size:6.5pt;color:#475569;margin-top:4mm;padding-top:3mm;border-top:1px solid rgba(255,255,255,.06)}
+.cover-logo{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;display:flex;align-items:center;justify-content:center}
+.footnote{font-size:6.5pt;color:#94a3b8;margin-top:10mm;padding-top:4mm;border-top:1px solid #e2e8f0;line-height:1.6}
 
 /* SAYFA */
-.ph{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px;border-bottom:3px solid #1e40af;margin-bottom:16px}
-.ph-title{font-size:16pt;font-weight:700;color:#0f172a}.ph-sub{font-size:8pt;color:#94a3b8}
+.ph{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:3px solid #1e40af;margin-bottom:14px}
+.ph-title{font-size:14pt;font-weight:700;color:#0f172a}.ph-sub{font-size:7.5pt;color:#94a3b8}
 .pb{}
 
 /* SKOR KUTULARI */
-.scores-row{display:flex;gap:12px;margin-bottom:18px}
-.sbox{flex:1;border-radius:10px;padding:14px 16px;text-align:center;border:1px solid}
+.scores-row{display:flex;gap:10px;margin-bottom:14px}
+.sbox{flex:1;border-radius:8px;padding:12px 14px;text-align:center;border:1px solid}
 .sbox.good{background:#f0fdf4;border-color:#86efac}.sbox.mid{background:#fffbeb;border-color:#fcd34d}.sbox.bad{background:#fef2f2;border-color:#fca5a5}.sbox.neu{background:#f8fafc;border-color:#e2e8f0}
-.snum{font-size:26pt;font-weight:800;line-height:1}
+.snum{font-size:22pt;font-weight:800;line-height:1}
 .sbox.good .snum{color:#16a34a}.sbox.mid .snum{color:#d97706}.sbox.bad .snum{color:#dc2626}.sbox.neu .snum{color:#64748b}
-.slbl{font-size:8pt;color:#64748b;margin-top:4px}small{font-size:7pt}
+.slbl{font-size:7pt;color:#64748b;margin-top:4px}small{font-size:6.5pt}
 
 /* BÖLÜM BAŞLIĞI */
-.stitle{font-size:9pt;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #dbeafe}
+.stitle{font-size:8pt;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid #dbeafe}
 
-/* TABLO */
-.rt{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:14px;table-layout:fixed}
+/* TABLO — taşma yok, daraltılmış padding */
+.rt{width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:12px;table-layout:fixed}
 .rt thead tr{background:#1e3a5f;color:#fff}
-.rt th{padding:7px 10px;font-size:7.5pt;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden}
-.rt th:first-child{text-align:left}
+.rt th{padding:5px 6px;font-size:7pt;font-weight:700;text-align:center;overflow:hidden;white-space:nowrap}
+.rt th:first-child{text-align:left;padding-left:8px}
 .rt tbody tr:nth-child(even){background:#f8fafc}
-.rt tbody tr:hover{background:#eff6ff}
-.rt td{padding:6px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle;text-align:center;white-space:nowrap;overflow:hidden}
-.rn{font-weight:500;color:#1e293b;text-align:left!important;white-space:normal!important;word-break:break-word}.rf{display:block;font-size:7pt;color:#94a3b8;font-family:monospace;font-weight:400}.ri{font-size:8pt;color:#94a3b8;text-align:center!important}.rs{font-size:8pt;font-weight:600;text-align:center!important}
-.rv{font-weight:700;text-align:center!important}
+.rt td{padding:5px 6px;border-bottom:1px solid #e2e8f0;vertical-align:middle;text-align:center;overflow:hidden;white-space:nowrap;font-size:7.5pt}
+.rn{font-weight:500;color:#1e293b;text-align:left!important;white-space:normal!important;word-break:break-word;padding-left:8px!important;font-size:8pt}.rf{display:block;font-size:6pt;color:#94a3b8;font-family:monospace;font-weight:400;margin-top:1px}.ri{font-size:7pt;color:#94a3b8;text-align:center!important}.rs{font-size:7pt;font-weight:700;text-align:center!important}
+.rv{font-weight:700;text-align:center!important;font-size:7.5pt}
 .good{color:#16a34a}.mid{color:#d97706}.bad{color:#dc2626}.neu{color:#64748b}
 .rs.good{color:#16a34a}.rs.mid{color:#d97706}.rs.bad{color:#dc2626}
 
 /* ÖNERİLER */
-.oneriler{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:8px}
-.oneri{font-size:9pt;color:#92400e;padding:5px 0;border-bottom:1px solid rgba(253,230,138,.4)}.oneri:last-child{border:none}
+.oneriler{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-top:6px}
+.oneri{font-size:8pt;color:#92400e;padding:4px 0;border-bottom:1px solid rgba(253,230,138,.4)}.oneri:last-child{border:none}
 
 /* AI */
-.ai-box{background:#f8fafc;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;padding:14px 16px;font-size:10pt;line-height:1.8;color:#334155}
+.ai-box{background:#f8fafc;border-left:4px solid #3b82f6;border-radius:0 6px 6px 0;padding:12px 14px;font-size:9pt;line-height:1.8;color:#334155}
 
 /* PRINT */
 @media print{
@@ -3413,190 +3366,6 @@ ${body}
 }
 
 // ─── MİZAN PDF RAPORU ────────────────────────────────────────────────────────
-function raporOnizleMizan(){
-  const mizanDonemler = S.periods.filter(p=>p.isMizan&&Object.values(p.mizanAccts||{}).length>0);
-  if(!mizanDonemler.length){ showToast('Detay mizan verisi bulunamadı','error'); return; }
-
-  const sirket  = document.getElementById('rpr_sirket')?.value||'';
-  const hazır   = document.getElementById('rpr_hazirlayan')?.value||'';
-  const donem   = document.getElementById('rpr_donem')?.value||mizanDonemler.map(p=>p.name).join(', ');
-  const tarih   = document.getElementById('rpr_tarih')?.value||new Date().toLocaleDateString('tr-TR');
-  const logoHtml= S.logoDataUrl?`<img src="${S.logoDataUrl}" style="max-height:50px;max-width:150px;object-fit:contain;display:block">`:'';
-
-  const incBakiye  = document.getElementById('rpr_mizan_bakiye')?.checked;
-  const incAnomali = document.getElementById('rpr_mizan_anomali')?.checked;
-  const incCmp     = document.getElementById('rpr_mizan_compare')?.checked;
-  const incAI      = document.getElementById('rpr_mizan_ai')?.checked;
-
-  const fC2=v=>{if(!v&&v!==0)return'—';const n=Number(v);if(isNaN(n))return'—';return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n)+' ₺'};
-
-  let body='';
-
-  // ── KAPAK ────────────────────────────────────────────────────────────────
-  body+=`<div class="page cover-page">
-    <div class="cover-header">
-      <span class="brand">Mizan Mind</span>
-      ${logoHtml?`<div class="cover-logo">${logoHtml}</div>`:'<span class="cover-badge">Detay Mizan Raporu</span>'}
-    </div>
-    <div class="cover-center">
-      <div class="cover-eyebrow">DETAY MİZAN ANALİZ RAPORU</div>
-      <div class="cover-company">${sirket||'Şirket'}</div>
-    </div>
-    <div class="cover-grid">
-      <div class="cover-cell"><div class="cell-label">Dönem</div><div class="cell-val">${donem||'—'}</div></div>
-      <div class="cover-cell"><div class="cell-label">Tarih</div><div class="cell-val">${tarih}</div></div>
-      <div class="cover-cell"><div class="cell-label">Hazırlayan</div><div class="cell-val">${hazır||'—'}</div></div>
-      <div class="cover-cell"><div class="cell-label">Dönem Sayısı</div><div class="cell-val">${mizanDonemler.length}</div></div>
-    </div>
-    <div class="cover-footer">Bu rapor Mizan Mind platformu tarafından otomatik oluşturulmuştur. Yatırım tavsiyesi niteliği taşımaz.</div>
-  </div>`;
-
-  // ── HESAP BAKİYELERİ ─────────────────────────────────────────────────────
-  if(incBakiye){
-    mizanDonemler.forEach(mp=>{
-      const accts=mp.mizanAccts||{};
-      const GRUP={'1':'Dönen Varlıklar','2':'Duran Varlıklar','3':'Kısa Vadeli Yük.','4':'Uzun Vadeli Yük.','5':'Özsermaye','6':'Gelir Tablosu','7':'Maliyet Hesapları'};
-      const tumKodlar=Object.keys(accts).sort();
-      body+=`<div class="page"><div class="ph"><div class="ph-title">Hesap Bakiyeleri</div><div class="ph-sub">${sirket} — ${mp.name||'Dönem'}</div></div><div class="pb">`;
-      body+=`<table style="width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed">
-        <colgroup><col style="width:12%"><col style="width:35%"><col style="width:27%"><col style="width:26%"></colgroup>
-        <thead><tr style="background:#1e3a5f;color:#fff">
-          <th style="padding:7px 10px;text-align:left;font-size:8pt">Kod</th>
-          <th style="padding:7px 10px;text-align:left;font-size:8pt">Hesap Adı</th>
-          <th style="padding:7px 10px;text-align:center;font-size:8pt">Borç</th>
-          <th style="padding:7px 10px;text-align:center;font-size:8pt">Alacak</th>
-        </tr></thead><tbody>`;
-      let sonGrup='';
-      tumKodlar.forEach(k=>{
-        const g=k.charAt(0);
-        if(g!==sonGrup){
-          sonGrup=g;
-          body+=`<tr style="background:#eef2f7"><td colspan="4" style="padding:6px 10px;font-size:8pt;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px">${GRUP[g]||'Diğer'}</td></tr>`;
-        }
-        const a=accts[k];
-        if(!a)return;
-        const bg=Object.keys(accts).indexOf(k)%2===0?'#ffffff':'#f8fafc';
-        body+=`<tr style="background:${bg}">
-          <td style="padding:6px 10px;font-family:monospace;font-size:8.5pt;color:#2563eb">${k}</td>
-          <td style="padding:6px 10px;font-size:8.5pt;color:#1e293b">${(a.n||'').substring(0,35)}</td>
-          <td style="padding:6px 10px;text-align:center;font-size:8.5pt;font-family:monospace">${a.d>0?fC2(a.d):'—'}</td>
-          <td style="padding:6px 10px;text-align:center;font-size:8.5pt;font-family:monospace">${a.c>0?fC2(a.c):'—'}</td>
-        </tr>`;
-      });
-      body+=`</tbody></table></div></div>`;
-    });
-  }
-
-  // ── ANOMALİ ANALİZİ (ilk dönemden) ───────────────────────────────────────
-  if(incAnomali){
-    // rDetay anomalilerini tekrar hesapla (ilk mizan dönemi için)
-    const mp=mizanDonemler[0];
-    const accts=mp.mizanAccts||{};
-    const bD2=(k)=>accts[k]?(accts[k].d-accts[k].c):0;
-    const bC2=(k)=>accts[k]?(accts[k].c-accts[k].d):0;
-    const suph128=bD2('128'), sav159=bD2('159'), avans196=bD2('196');
-    const alacSen=bD2('121'), borcSen=bC2('321');
-    const uzunAlac=bD2('232')+bD2('231');
-    const topAktif=bD2('100')+bD2('102')+bD2('120')+bD2('150');
-
-    const riskler=[];
-    if(suph128>0) riskler.push({sev:'🔴',k:'Şüpheli Alacak (128)',v:fC2(suph128),a:'Aktiften düşülür, bankalar kabul etmez'});
-    if(sav159>0&&topAktif>0&&sav159/topAktif>0.03) riskler.push({sev:'🟡',k:'Verilen Sipariş Avansları (159)',v:fC2(sav159),a:'Uzun süre kapanmıyorsa para transferi sayılır'});
-    if(alacSen>0&&bD2('600')>0&&alacSen/(bD2('600')||1)*100>30) riskler.push({sev:'🟡',k:'Alacak Senetleri (121)',v:fC2(alacSen),a:'Hatır senedi şüphesi, likidite kalitesini bozar'});
-    if(uzunAlac>0) riskler.push({sev:'🟡',k:'Uzun Vadeli Diğer Alacaklar (231/232)',v:fC2(uzunAlac),a:'Atıl para veya ortak finansmanı riski'});
-    if(avans196>0) riskler.push({sev:'🟡',k:'Personel Avansları (196)',v:fC2(avans196),a:'Kurumsallık eksikliği sinyali'});
-    if(borcSen>0&&bC2('320')>0&&borcSen/(bC2('320')||1)*100>50) riskler.push({sev:'🟡',k:'Borç Senetleri (321)',v:fC2(borcSen),a:'Finansal stres göstergesi'});
-
-    body+=`<div class="page"><div class="ph"><div class="ph-title">Risk & Anomali Analizi</div><div class="ph-sub">${sirket} — ${mp.name||'Dönem'}</div></div><div class="pb">`;
-    if(riskler.length){
-      body+=`<table style="width:100%;border-collapse:collapse;font-size:9pt">
-        <thead><tr style="background:#1e3a5f;color:#fff"><th style="padding:8px 10px;text-align:left">Risk Kalemi</th><th style="padding:8px 10px;text-align:center">Tutar</th><th style="padding:8px 10px;text-align:left">Değerlendirme</th></tr></thead><tbody>`;
-      riskler.forEach((r,i)=>{
-        body+=`<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-          <td style="padding:7px 10px;font-weight:600">${r.sev} ${r.k}</td>
-          <td style="padding:7px 10px;text-align:center;font-family:monospace;font-weight:700">${r.v}</td>
-          <td style="padding:7px 10px;font-size:8.5pt;color:#475569">${r.a}</td>
-        </tr>`;
-      });
-      body+=`</tbody></table>`;
-    } else {
-      body+=`<div style="padding:20px;text-align:center;color:#64748b">✓ Kritik risk kalemi tespit edilmedi.</div>`;
-    }
-    body+=`</div></div>`;
-  }
-
-  // ── KARŞILAŞTIRMA ────────────────────────────────────────────────────────
-  if(incCmp&&mizanDonemler.length>=2){
-    const GRUP={'1':'Dönen Varlıklar','2':'Duran Varlıklar','3':'Kısa Vadeli Yük.','4':'Uzun Vadeli Yük.','5':'Özsermaye','6':'Gelir Tablosu'};
-    const tumKodlar=[...new Set(mizanDonemler.flatMap(mp=>Object.keys(mp.mizanAccts||{})))].sort();
-    const pW=Math.max(20,Math.floor(60/mizanDonemler.length));
-    const col1W=100-pW*mizanDonemler.length;
-    body+=`<div class="page"><div class="ph"><div class="ph-title">Dönemsel Karşılaştırma</div><div class="ph-sub">${sirket}</div></div><div class="pb">`;
-    body+=`<table style="width:100%;border-collapse:collapse;font-size:8.5pt;table-layout:fixed">
-      <colgroup><col style="width:${col1W}%">${mizanDonemler.map(()=>`<col style="width:${pW}%">`).join('')}</colgroup>
-      <thead><tr style="background:#1e3a5f;color:#fff">
-        <th style="padding:7px 10px;text-align:left">Hesap</th>
-        ${mizanDonemler.map(mp=>`<th style="padding:7px 6px;text-align:center">${mp.name||'Dönem'}</th>`).join('')}
-      </tr></thead><tbody>`;
-    let sonG='';
-    tumKodlar.forEach(k=>{
-      const g=k.charAt(0);
-      if(!GRUP[g])return;
-      if(g!==sonG){sonG=g;body+=`<tr style="background:#eef2f7"><td colspan="${1+mizanDonemler.length}" style="padding:5px 10px;font-size:8pt;font-weight:700;color:#1e40af">${GRUP[g]}</td></tr>`;}
-      const vals=mizanDonemler.map(mp=>{const a=mp.mizanAccts?.[k];if(!a)return null;return['1','2','6','7'].includes(g)?a.d-a.c:a.c-a.d;});
-      if(vals.every(v=>v===null||Math.abs(v)<1))return;
-      const ad=(mizanDonemler.find(mp=>mp.mizanAccts?.[k])?.mizanAccts?.[k]?.n||'').substring(0,28);
-      const ilk=vals.find(v=>v!==null)??0, son=vals.filter(v=>v!==null).pop()??0;
-      const delta=son-ilk, pct=ilk!==0?(delta/Math.abs(ilk)*100):null;
-      const dCol=delta>0?'#16a34a':delta<0?'#dc2626':'#64748b';
-      body+=`<tr style="background:${tumKodlar.indexOf(k)%2===0?'#fff':'#f8fafc'}">
-        <td style="padding:5px 10px;font-weight:500">${k} ${ad}</td>
-        ${vals.map(v=>`<td style="padding:5px 6px;text-align:center;font-family:monospace;font-size:8.5pt">${v!==null&&Math.abs(v)>=1?fC2(v):'—'}</td>`).join('')}
-      </tr>`;
-    });
-    body+=`</tbody></table></div></div>`;
-  }
-
-  // ── AI YORUM ──────────────────────────────────────────────────────────────
-  if(incAI&&S.aiRes){
-    body+=`<div class="page"><div class="ph"><div class="ph-title">AI Uzman Değerlendirmesi</div><div class="ph-sub">${sirket}</div></div><div class="pb">
-      <div class="ai-box">${S.aiRes.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
-    </div></div>`;
-  }
-
-  // ── PDF penceresi ─────────────────────────────────────────────────────────
-  const win=window.open('','_blank','width=960,height=750');
-  win.document.write(`<!DOCTYPE html><html lang="tr"><head>
-<meta charset="UTF-8"><title>${sirket} — Detay Mizan Raporu</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;font-size:10pt;line-height:1.5}
-.page{background:#fff;width:210mm;min-height:297mm;margin:0 auto 8mm;padding:18mm;box-shadow:0 2px 12px rgba(0,0,0,.08);page-break-after:always}
-.cover-page{background:linear-gradient(160deg,#0f172a 0%,#1e3a5f 60%,#0f172a 100%);color:#fff;display:flex;flex-direction:column;justify-content:space-between}
-.cover-header{display:flex;justify-content:space-between;align-items:center}
-.brand{font-size:20pt;font-weight:800;color:#fff;letter-spacing:-1px}
-.cover-badge{font-size:8pt;color:#93c5fd;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(147,197,253,.3);padding:4px 10px;border-radius:20px}
-.cover-center{flex:1;display:flex;flex-direction:column;justify-content:center;padding:12mm 0 8mm}
-.cover-eyebrow{font-size:8pt;letter-spacing:4px;text-transform:uppercase;color:#64748b;margin-bottom:10px}
-.cover-company{font-size:28pt;font-weight:800;color:#f8fafc;line-height:1.1}
-.cover-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:8mm}
-.cover-cell{}.cell-label{font-size:7pt;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.cell-val{font-size:10pt;font-weight:600;color:#e2e8f0}
-.cover-footer{font-size:7pt;color:#475569;margin-top:5mm;padding-top:4mm;border-top:1px solid rgba(255,255,255,.06)}
-.cover-logo{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 12px}
-.ph{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px;border-bottom:3px solid #1e40af;margin-bottom:16px}
-.ph-title{font-size:16pt;font-weight:700;color:#0f172a}.ph-sub{font-size:8pt;color:#94a3b8}
-.ai-box{background:#f8fafc;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;padding:14px 16px;font-size:10pt;line-height:1.8;color:#334155}
-.stitle{font-size:9pt;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #dbeafe}
-@media print{body{background:#fff}.page{box-shadow:none;margin:0;page-break-after:always}.page:last-child{page-break-after:avoid}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}
-@page{size:A4;margin:0}
-</style></head><body>
-${body}
-<script>setTimeout(()=>{window.focus();window.print()},600)<\/script>
-</body></html>`);
-  win.document.close();
-}
-
-// ─── TEMA YÖNETİMİ ───────────────────────────────────────────────────────────
 function toggleTheme(){
   const isLight=document.documentElement.getAttribute('data-theme')==='light';
   const newTheme=isLight?'dark':'light';
