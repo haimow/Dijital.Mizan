@@ -670,7 +670,7 @@ if(isFirstVisit){
     </div>
 
     <!-- Manuel -->
-    <div class="onb-card" onclick="sTab('input')" style="cursor:pointer;opacity:.85">
+    <div class="onb-card" onclick="S.periods[S.ap].fileName='manual';render();setTimeout(()=>document.querySelector('.ig')?.scrollIntoView({behavior:'smooth'}),100)" style="cursor:pointer;opacity:.85">
       <div class="onb-icon" style="background:rgba(123,92,240,.1)">✏️</div>
       <div class="onb-title">Manuel Giriş</div>
       <div class="onb-desc">Dosyanız yoksa finansal verileri kendiniz girin. Bilanço ve gelir tablosu kalemlerini doldurun.</div>
@@ -2457,7 +2457,286 @@ function rChecklist(el) {
 
 // ─── BAŞLAT ───────────────────────────────────────────────────────────────────
 // Auth fonksiyonlarını global scope'a bağla (inline onclick handler'lar için zorunlu)
-// ─── SUPABASE API ────────────────────────────────────────────────────────────
+// ─── RASYO ANALİZİ ───────────────────────────────────────────────────────────
+function rRat(el){
+  const p=S.periods[S.ap]; const d=nd(p);
+  const hasBilanco=Object.values(p.data).some(v=>v&&v!=='0');
+  if(p.isMizan){
+    el.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:36px">
+      <div style="font-size:32px;margin-bottom:12px">📋</div>
+      <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:8px">Mizan'dan Rasyo Hesabı Yapılamaz</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.8;max-width:400px;margin:0 auto">
+        Rasyo analizi için <b>Bilanço</b> veya <b>Kurumlar Beyannamesi</b> verisi gereklidir.<br>
+        Yüklemek için <b>Veri Girişi</b> sekmesine gidin.
+      </div>
+      <button class="btn btn-p" onclick="sTab('input')" style="margin-top:16px">📥 Veri Girişi</button>
+    </div></div>`;
+    return;
+  }
+  if(!hasBilanco){
+    el.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:36px;color:var(--tm)">
+      Veri yüklenmedi. <button class="btn btn-p" onclick="sTab('input')" style="margin-top:12px">📥 Veri Girişi</button>
+    </div></div>`;
+    return;
+  }
+  let h='<div style="display:flex;flex-direction:column;gap:12px">';
+  // Sağlık skoru
+  const allItems=Object.values(RATIOS).flatMap(c=>c.items);
+  const scored=allItems.map(r=>{const v=r.calc(d);if(v===null)return null;return rColS(r.key,v);}).filter(Boolean);
+  const goodC=scored.filter(s=>s==='var(--gn)').length;
+  const total=scored.length;
+  const pct=total?Math.round(goodC/total*100):0;
+  const sColor=pct>=70?'var(--gn)':pct>=40?'var(--am)':'var(--rd)';
+  h+=`<div class="card"><div class="card-h"><div class="card-t">📊 Finansal Sağlık Skoru</div></div>
+  <div class="card-b" style="display:flex;align-items:center;gap:16px;padding:16px">
+    <div style="width:64px;height:64px;border-radius:50%;border:4px solid ${sColor};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:${sColor};font-family:'JetBrains Mono',monospace">${pct}%</div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--t1)">${pct>=70?'İyi':pct>=40?'Gelişime Açık':'Zayıf'}</div>
+      <div style="font-size:11px;color:var(--tm)">${goodC}/${total} rasyo hedef aralığında</div>
+      <div style="margin-top:8px;height:6px;width:200px;background:var(--bgi);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${sColor};border-radius:3px;transition:width .5s"></div>
+      </div>
+    </div>
+  </div></div>`;
+  // Rasyo kategorileri
+  Object.entries(RATIOS).forEach(([,cat])=>{
+    const items=cat.items.filter(r=>r.calc(d)!==null);
+    if(!items.length)return;
+    h+=`<div class="card"><div class="card-h"><div class="card-t">${cat.icon} ${cat.label}</div></div><div class="card-b" style="padding:0">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">`;
+    items.forEach(r=>{
+      const v=r.calc(d); const col=rColS(r.key,v);
+      const fmt=v===null?'—':r.pct?fP(v):r.cur?fC(v):fR(v);
+      h+=`<div class="rc" style="padding:14px 16px;border-right:1px solid var(--brd);border-bottom:1px solid var(--brd)">
+        <div style="font-size:11px;color:var(--tm);margin-bottom:4px">${r.name}</div>
+        <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${col}">${fmt}</div>
+        <div style="font-size:9px;color:var(--t3);margin-top:3px">İdeal: ${r.ideal}</div>
+        <div style="font-size:9px;color:var(--tm);margin-top:1px">${r.formula}</div>
+      </div>`;
+    });
+    h+='</div></div></div>';
+  });
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+// ─── DETAY MİZAN ─────────────────────────────────────────────────────────────
+function rDetay(el){
+  const mizanP=S.periods.find(p=>p.isMizan&&Object.keys(p.mizanAccts||{}).length>0);
+  if(!mizanP){
+    el.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:36px">
+      <div style="font-size:32px;margin-bottom:12px">📋</div>
+      <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:8px">Detay Mizan Yüklenmedi</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.8;max-width:400px;margin:0 auto">
+        Bu sekme yalnızca <b>Detay Mizan</b> (Excel THP formatı) verisiyle çalışır.<br>
+        Bilanço veya beyanname için <b>Rasyolar</b> sekmesini kullanın.
+      </div>
+      <button class="btn btn-p" onclick="sTab('input')" style="margin-top:16px">📥 Mizan Yükle</button>
+    </div></div>`;
+    return;
+  }
+  const accts=mizanP.mizanAccts||{};
+  const bD=(k)=>accts[k]?(accts[k].d-accts[k].c):0;
+  const bC=(k)=>accts[k]?(accts[k].c-accts[k].d):0;
+  const totalAktif=bD('1');
+  const totalSatis=bD('600');
+  // Anomaliler
+  const anomaliler=[];
+  const sipariAvans159=bD('159'), alacakSen121=bD('121'), uzunAlac232=bD('232')+bD('231');
+  const personelAvans196=bD('196'), borcSen321=bC('321'), supheli128=bD('128');
+  const borc320=bC('320')+bC('321')+bC('322')+bC('329');
+  if(supheli128>0&&totalAktif>0) anomaliler.push({sev:'rd',msg:`Şüpheli Alacak (128): ${fC(supheli128)} — aktiften düşülür`,detay:'Bankacılar bu tutarı aktiften siler, net alacak daha düşüktür.'});
+  if(sipariAvans159>0&&totalAktif>0&&sipariAvans159/totalAktif>0.03) anomaliler.push({sev:sipariAvans159/totalAktif>0.08?'rd':'am',msg:`Verilen Sipariş Avansları (159): ${fC(sipariAvans159)} — aktifin %${(sipariAvans159/totalAktif*100).toFixed(1)}'i`,detay:'Uzun süre kapanmayan avanslar para transferi sayılır, aktif şişkinliği riski.'});
+  if(alacakSen121>0&&totalSatis>0&&alacakSen121/totalSatis>0.3) anomaliler.push({sev:'am',msg:`Alacak Senetleri (121): Cironun %${(alacakSen121/totalSatis*100).toFixed(0)}'i senetli (${fC(alacakSen121)})`,detay:'Hatır senedi şüphesi — bankalar likidite analizine dahil etmez.'});
+  if(uzunAlac232>0&&totalAktif>0&&uzunAlac232/totalAktif>0.05) anomaliler.push({sev:uzunAlac232/totalAktif>0.1?'rd':'am',msg:`Uzun Vadeli Diğer Alacaklar (231/232): ${fC(uzunAlac232)}`,detay:'Atıl para veya ortak finansmanı riski — cari oranı olumsuz etkiler.'});
+  if(personelAvans196>0&&totalAktif>0&&personelAvans196/totalAktif>0.01) anomaliler.push({sev:'am',msg:`Personel Avansları (196): ${fC(personelAvans196)}`,detay:'Kurumsallıktan uzak yapı sinyali — operasyonel risk puanını artırır.'});
+  if(borcSen321>0&&borc320>0&&borcSen321/borc320>0.5) anomaliler.push({sev:'am',msg:`Borç Senetleri (321): Ticari borcun %${(borcSen321/borc320*100).toFixed(0)}'i senetli`,detay:'Finansal stres göstergesi — tedarikçi nezdinde kredi itibarı düşük.'});
+
+  let h='<div style="display:flex;flex-direction:column;gap:12px">';
+  // Başlık
+  h+=`<div class="card"><div class="card-h"><div class="card-t">🔍 Detay Mizan Analizi — ${mizanP.name||'Dönem'}</div>
+    <span style="font-size:10px;color:var(--tm)">${Object.keys(accts).length} hesap kodu</span>
+  </div></div>`;
+  // Anomaliler
+  if(anomaliler.length){
+    h+=`<div class="card"><div class="card-h"><div class="card-t">⚠️ Risk & Anomali Tespitleri</div><span style="font-size:10px;color:var(--rd);font-weight:600">${anomaliler.length} uyarı</span></div><div class="card-b" style="padding:8px">`;
+    anomaliler.forEach(a=>{
+      const bg=a.sev==='rd'?'rgba(239,68,68,.07)':'rgba(245,158,11,.07)';
+      const bc=a.sev==='rd'?'rgba(239,68,68,.2)':'rgba(245,158,11,.2)';
+      const icon=a.sev==='rd'?'🔴':'🟡';
+      h+=`<div style="padding:10px 12px;background:${bg};border:1px solid ${bc};border-radius:8px;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:600;color:var(--t1)">${icon} ${a.msg}</div>
+        <div style="font-size:10px;color:var(--tm);margin-top:4px">${a.detay}</div>
+      </div>`;
+    });
+    h+=`</div></div>`;
+  } else {
+    h+=`<div class="card"><div class="card-b" style="padding:16px;text-align:center;color:var(--gn)">✅ Kritik anomali tespit edilmedi</div></div>`;
+  }
+  // Hesap tablosu
+  const GRUP={'1':'Dönen Varlıklar','2':'Duran Varlıklar','3':'Kısa Vadeli Yük.','4':'Uzun Vadeli Yük.','5':'Özsermaye','6':'Gelir Tablosu','7':'Maliyet'};
+  h+=`<div class="card"><div class="card-h"><div class="card-t">📊 Hesap Bakiyeleri</div></div><div class="card-b" style="padding:0;overflow:auto;max-height:60vh">
+  <table class="ctb"><thead><tr><th>Kod</th><th>Hesap Adı</th><th style="text-align:right">Borç</th><th style="text-align:right">Alacak</th><th style="text-align:right">Bakiye</th></tr></thead><tbody>`;
+  let sg='';
+  Object.keys(accts).sort().forEach(k=>{
+    const g=k.charAt(0);
+    if(g!==sg){sg=g;h+=`<tr style="background:var(--acd)"><td colspan="5" style="font-size:9px;font-weight:700;color:var(--ac);padding:5px 10px;text-transform:uppercase">${GRUP[g]||'Diğer'}</td></tr>`;}
+    const a=accts[k]; if(!a)return;
+    const bak=['1','2','6','7'].includes(g)?a.d-a.c:a.c-a.d;
+    if(Math.abs(bak)<1&&Math.abs(a.d)<1)return;
+    h+=`<tr><td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ac)">${k}</td>
+      <td style="font-size:11px">${(a.n||'').substring(0,30)}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px">${a.d>0?fC(a.d):'—'}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px">${a.c>0?fC(a.c):'—'}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;color:${bak>=0?'var(--gn)':'var(--rd)'}">${fC(Math.abs(bak))}</td></tr>`;
+  });
+  h+=`</tbody></table></div></div></div>`;
+  el.innerHTML=h;
+}
+
+// ─── KREDİ ANALİZİ ──────────────────────────────────────────────────────────
+function rKredi(el){
+  const p=S.periods[S.ap]; const d=nd(p);
+  if(p.isMizan){
+    el.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:36px">
+      <div style="font-size:32px;margin-bottom:12px">🏦</div>
+      <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:8px">Mizan'dan Kredi Analizi Yapılamaz</div>
+      <div style="font-size:11px;color:var(--t2)">Bilanço veya beyanname yükleyin.</div>
+      <button class="btn btn-p" onclick="sTab('input')" style="margin-top:16px">📥 Veri Girişi</button>
+    </div></div>`;
+    return;
+  }
+  if(!d.totalAssets&&!d.currentAssets){
+    el.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:36px;color:var(--tm)">
+      Bilanço verisi yüklenmedi.
+      <button class="btn btn-p" onclick="sTab('input')" style="display:block;margin:12px auto 0">📥 Veri Girişi</button>
+    </div></div>`;
+    return;
+  }
+  // Altman Z-Score
+  const X1=d.currentAssets&&d.shortTermLiabilities&&d.totalAssets?(d.currentAssets-d.shortTermLiabilities)/d.totalAssets:null;
+  const X2=d.equity&&d.totalAssets?d.equity/d.totalAssets:null;
+  const X3=d.operatingProfit!=null&&d.totalAssets?d.operatingProfit/d.totalAssets:null;
+  const X4=d.equity&&d.totalLiabilities?d.equity/d.totalLiabilities:null;
+  const X5=d.netSales&&d.totalAssets?d.netSales/d.totalAssets:null;
+  const zScore=(X1!==null&&X2!==null&&X3!==null&&X4!==null&&X5!==null)?
+    6.56*X1+3.26*X2+6.72*X3+1.05*X4:null;
+  const zLabel=zScore===null?'—':zScore>2.6?'Güvenli Bölge':zScore>1.1?'Gri Bölge (Dikkat)':'Tehlikeli Bölge';
+  const zRenk=zScore===null?'var(--tm)':zScore>2.6?'var(--gn)':zScore>1.1?'var(--am)':'var(--rd)';
+
+  // BDDK kriterleri
+  const BDDK_ITEMS=[
+    {name:'Cari Oran',key:'cr',ideal:'≥ 1.5',good:v=>v>=1.5,bad:v=>v<1.0},
+    {name:'Borç/Özsermaye',key:'de',ideal:'≤ 2.0',good:v=>v<=2.0,bad:v=>v>3.0},
+    {name:'Faiz Karşılama',key:'ic',ideal:'≥ 3.0',good:v=>v>=3.0,bad:v=>v<1.5},
+    {name:'Net Kâr Marjı',key:'nm',ideal:'≥ %5',good:v=>v>=5,bad:v=>v<0},
+    {name:'Borç Oranı',key:'dr',ideal:'≤ 0.60',good:v=>v<=0.6,bad:v=>v>0.75},
+    {name:'ROA',key:'roa',ideal:'≥ %5',good:v=>v>=5,bad:v=>v<2},
+  ];
+
+  let h='<div style="display:flex;flex-direction:column;gap:12px">';
+  // Z-Score kart
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card"><div class="card-b" style="text-align:center;padding:20px">
+      <div style="font-size:9px;color:var(--tm);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Altman Z-Score</div>
+      <div style="font-size:36px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${zRenk}">${zScore!==null?zScore.toFixed(2):'—'}</div>
+      <div style="font-size:11px;color:${zRenk};margin-top:6px;font-weight:600">${zLabel}</div>
+      <div style="font-size:10px;color:var(--tm);font-style:italic;margin-top:10px;line-height:1.6">
+        <b style="font-style:normal;color:var(--t2)">Altman Z-Score nedir?</b> 1968'de geliştirilen iflas tahmin modelidir.
+        <span style="color:var(--gn)">≥2.6 Güvenli</span> · <span style="color:var(--am)">1.1–2.6 Gri</span> · <span style="color:var(--rd)">≤1.1 Tehlikeli</span>
+      </div>
+    </div></div>
+    <div class="card"><div class="card-b" style="padding:16px">
+      <div style="font-size:9px;color:var(--tm);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Kredi Skoru</div>
+      ${(()=>{const good=BDDK_ITEMS.filter(k=>{const r=Object.values(RATIOS).flatMap(c=>c.items).find(x=>x.key===k.key);return r&&k.good(r.calc(d)||0);}).length;const pct=Math.round(good/BDDK_ITEMS.length*100);const col=pct>=70?'var(--gn)':pct>=40?'var(--am)':'var(--rd)';return`<div style="font-size:36px;font-weight:800;color:${col};font-family:'JetBrains Mono',monospace">${pct}%</div><div style="font-size:11px;color:var(--tm);margin-top:4px">${good}/${BDDK_ITEMS.length} BDDK kriteri karşılandı</div>`;})()}
+    </div></div>
+  </div>`;
+
+  // BDDK tablo
+  h+=`<div class="card"><div class="card-h"><div class="card-t">BDDK Kriter Değerlendirmesi</div></div><div class="card-b" style="padding:0;overflow:auto">
+  <table class="ctb"><thead><tr><th>Kriter</th><th>Değer</th><th>İdeal</th><th>Durum</th></tr></thead><tbody>`;
+  BDDK_ITEMS.forEach(k=>{
+    const r=Object.values(RATIOS).flatMap(c=>c.items).find(x=>x.key===k.key);
+    if(!r)return;
+    const v=r.calc(d);
+    const isGood=v!==null&&k.good(v); const isBad=v!==null&&k.bad(v);
+    const col=isGood?'var(--gn)':isBad?'var(--rd)':'var(--am)';
+    const fmt=v===null?'—':r.pct?fP(v):r.cur?fC(v):fR(v);
+    const lbl=isGood?'✓ Uygun':isBad?'✗ Yetersiz':'⚠ Sınırda';
+    h+=`<tr><td>${k.name}</td><td style="font-family:'JetBrains Mono',monospace;color:${col};font-weight:700">${fmt}</td><td style="color:var(--tm)">${k.ideal}</td><td style="color:${col};font-weight:600">${lbl}</td></tr>`;
+  });
+  h+=`</tbody></table></div></div></div>`;
+  el.innerHTML=h;
+}
+
+// ─── PDF RAPOR UI ─────────────────────────────────────────────────────────────
+function rRapor(el){
+  const p=S.periods[S.ap];
+  const bilancoDonemler=S.periods.filter(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0'));
+  const mizanDonemler=S.periods.filter(p=>p.isMizan);
+  let h=`<div class="card"><div class="card-h"><div class="card-t">📄 PDF Rapor Oluştur</div></div><div class="card-b">`;
+  if(bilancoDonemler.length===0){
+    h+=`<div style="text-align:center;padding:36px">
+      <div style="font-size:32px;margin-bottom:12px">${mizanDonemler.length>0?'📋':'📄'}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:8px">${mizanDonemler.length>0?'Detay Mizan için PDF Raporu Mevcut Değil':'Veri Yüklenmedi'}</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.8;max-width:420px;margin:0 auto">
+        PDF raporu yalnızca <b>Bilanço</b> ve <b>Gelir Tablosu</b> içeren dönemler için oluşturulabilir.<br>
+        ${mizanDonemler.length>0?'Detay Mizan analizi için <b>🔍 Detay Mizan</b> sekmesini kullanın.':'Kurumlar beyannamesi veya bilanço yükleyin.'}
+      </div>
+      <button class="btn btn-p" onclick="sTab('input')" style="margin-top:16px">📥 Veri Girişi</button>
+    </div>`;
+    h+=`</div></div>`; el.innerHTML=h; return;
+  }
+  if(mizanDonemler.length>0){
+    h+=`<div style="padding:10px 14px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:14px;font-size:11px;color:var(--am)">
+      ℹ️ ${mizanDonemler.length} Detay Mizan dönemi PDF raporuna dahil edilmez.
+    </div>`;
+  }
+  const aktifP=bilancoDonemler.find(x=>x===p)||bilancoDonemler[0];
+  const hasRasyo=bilancoDonemler.some(p=>Object.values(RATIOS).flatMap(c=>c.items).some(r=>r.calc(nd(p))!==null));
+  const hasKredi=bilancoDonemler.some(p=>nd(p).totalAssets&&nd(p).totalLiabilities);
+  const hasCmp=bilancoDonemler.length>=2;
+  h+=`<div style="margin-bottom:20px">
+    <div style="font-size:11px;color:var(--t2);margin-bottom:12px">Rapora eklenecek bölümler:</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${[['rpr_ratios',hasRasyo,'📊 Finansal Rasyolar',''],
+         ['rpr_kredi',hasKredi,'🏦 Kredi Analizi',''],
+         ['rpr_compare',hasCmp,'⚖️ Dönemsel Karşılaştırma','2+ dönem gerekli'],
+         ['rpr_ai',!!S.aiRes,'🤖 AI Uzman Yorum','Önce AI yorum oluşturun']
+        ].map(([id,avail,lbl,hint])=>`<label style="display:flex;align-items:center;gap:8px;background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:10px 12px;cursor:${avail?'pointer':'default'};opacity:${avail?1:.4}">
+        <input type="checkbox" id="${id}" ${avail?'checked':''} ${avail?'':'disabled'} style="accent-color:var(--ac);width:14px;height:14px">
+        <span style="font-size:12px">${lbl}</span>
+        ${!avail&&hint?`<span style="font-size:9px;color:var(--tm);margin-left:auto">${hint}</span>`:''}
+      </label>`).join('')}
+    </div>
+  </div>
+  <div style="margin-bottom:20px"><div style="font-size:11px;color:var(--t2);margin-bottom:10px">Rapor Bilgileri</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="igr"><label class="igl">Şirket Adı</label><input class="inp" id="rpr_sirket" placeholder="ABC A.Ş." value="${aktifP?.fileName?.replace(/\.[^/.]+$/,'')||''}"></div>
+    <div class="igr"><label class="igl">Hazırlayan</label><input class="inp" id="rpr_hazirlayan" placeholder="Mali Müşavir"></div>
+    <div class="igr"><label class="igl">Dönem</label><input class="inp" id="rpr_donem" value="${aktifP?.name||''}"></div>
+    <div class="igr"><label class="igl">Tarih</label><input class="inp" id="rpr_tarih" value="${new Date().toLocaleDateString('tr-TR')}"></div>
+  </div></div>
+  <div style="margin-bottom:20px">
+    <div style="font-size:11px;color:var(--t2);margin-bottom:10px">Firma Logosu <span style="color:var(--tm);font-size:9px">(isteğe bağlı)</span></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div id="logoPreviewBox" style="width:80px;height:50px;background:var(--bgi);border:1px dashed var(--brd);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--tm);overflow:hidden;cursor:pointer" onclick="document.getElementById('rpr_logo_inp').click()">
+        ${S.logoDataUrl?`<img src="${S.logoDataUrl}" style="max-width:76px;max-height:46px;object-fit:contain">`:'Logo Yükle'}
+      </div>
+      <div>
+        <input type="file" id="rpr_logo_inp" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+        <button class="btn" onclick="document.getElementById('rpr_logo_inp').click()" style="font-size:11px;margin-bottom:6px">📁 Dosya Seç</button>
+        <div id="logoStatus" style="font-size:10px;color:var(--tm)">${S.logoDataUrl?'✓ Logo yüklendi':'PNG, JPG — maks. 2MB'}</div>
+        <button class="btn" id="logoClearBtn" onclick="clearLogo()" style="font-size:10px;${S.logoDataUrl?'':'display:none;'}margin-top:4px;color:var(--rd)">✕ Kaldır</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:10px 14px;background:var(--acd);border:1px solid rgba(59,130,246,.15);border-radius:7px;font-size:11px;color:var(--t2);margin-bottom:16px;line-height:1.7">
+    💡 Önizleme açılınca <b>Hedef → PDF olarak kaydet</b> seçin. Chrome/Edge önerilir.
+  </div>
+  <button class="btn btn-p" onclick="raporOnizle()" style="font-size:12px;padding:9px 20px">👁 Önizle &amp; PDF İndir</button>`;
+  h+=`</div></div>`; el.innerHTML=h;
+}
 async function sbCall(action, data={}){
   if(!S.user) return {error:'Oturum yok'};
   let token='';
