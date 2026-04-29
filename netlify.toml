@@ -20,6 +20,11 @@
   to = "/.netlify/functions/supabase-proxy"
   status = 200
 
+[[redirects]]
+  from = "/api/google-auth"
+  to = "/.netlify/functions/google-auth"
+  status = 200
+
 # ─── /app/* → SPA fallback ────────────────────────────────
 # app/ klasörü içindeki bilinmeyen route'ları app/index.html'e yönlendir
 [[redirects]]
