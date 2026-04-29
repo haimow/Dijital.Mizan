@@ -308,7 +308,7 @@ valuation:{label:"Değerleme",icon:"🏷️",items:[
 };
 
 // STATE
-const S={periods:[{name:"",data:{},fileName:null,parseLog:[]}],ap:0,tab:"input",stab:"formulas",sbo:true,ecat:null,aiRes:"",aiLd:false,sektor:"",user:null,savedList:[],ed:{fişler:[],özet:{},log:[],dosyaAdi:null,aiYorum:'',aiLd:false},cl:{aktifListe:'kurumlar',kaydedilen:{}}};
+const S={periods:[{name:"",data:{},fileName:null,parseLog:[]}],ap:0,tab:"input",stab:"formulas",sbo:true,ecat:null,aiRes:"",aiLd:false,sektor:"",user:null,savedList:[],logoDataUrl:null,ed:{fişler:[],özet:{},log:[],dosyaAdi:null,aiYorum:'',aiLd:false},cl:{aktifListe:'kurumlar',kaydedilen:{}}};
 function eD(){const d={};FIELDS.forEach(s=>s.fields.forEach(f=>d[f.key]=""));return d}
 S.periods[0].data=eD();
 
@@ -626,7 +626,7 @@ const hasData=p.fileName&&Object.values(p.data).some(v=>v);
 const guidance=hasData?`<div style="margin-top:10px;padding:10px 14px;background:var(--acd);border:1px solid rgba(var(--ac-rgb,59 130 246)/.2);border-radius:6px;font-size:11px;color:var(--ac)">💡 Farklı bir dönem analiz etmek için yukarıdaki <strong>"+ Dönem Ekle"</strong> butonunu kullanın. Dönem adını çift tıklayarak düzenleyebilirsiniz.</div>`:'';
 
 // ── ONBOARDING: ilk açılışta veri yoksa göster ──────────────
-const isFirstVisit=!p.fileName&&!p.isMizan&&!Object.values(p.data).some(v=>v)&&!S.ed.fisler.length;
+const isFirstVisit=!p.fileName&&!p.isMizan&&!Object.values(p.data).some(v=>v)&&!(S.ed?.fişler?.length||S.ed?.fisler?.length||0);
 if(isFirstVisit){
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
 
@@ -2462,7 +2462,7 @@ async function sbCall(action, data={}){
   if(!S.user) return {error:'Oturum yok'};
   let token='';
   try{
-    const cu = getGoTrue().currentUser();
+    const cu = getGoTrue ? getGoTrue().currentUser() : null;
     if(cu) token = await cu.jwt();
   }catch(e){}
   try{
@@ -2471,6 +2471,7 @@ async function sbCall(action, data={}){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
       body: JSON.stringify({action, data})
     });
+    if(!r.ok) return {error:'HTTP '+r.status};
     return r.json();
   }catch(e){
     showToast('Bağlantı hatası: '+e.message,'error');
@@ -2481,12 +2482,19 @@ async function sbCall(action, data={}){
 // ─── KAYITLI ANALİZLER ───────────────────────────────────────────────────────
 async function loadSavedList(){
   if(!S.user) return;
-  const res = await sbCall('list');
-  if(res && res.data) S.savedList = res.data;
-  else S.savedList = [];
-  // Kayıtlı sekme açıksa yenile
-  const stab = document.getElementById('savedTab');
-  if(stab) rSaved(stab);
+  try{
+    const res = await sbCall('list');
+    if(res && Array.isArray(res.data)){
+      S.savedList = res.data;
+    } else if(res && Array.isArray(res)){
+      S.savedList = res;
+    } else {
+      S.savedList = [];
+    }
+  }catch(e){
+    S.savedList = [];
+    console.warn('loadSavedList hata:', e);
+  }
 }
 
 function loadSaved(id){
@@ -2697,23 +2705,57 @@ function raporOnizle(){
   S.ap=_origAP;
 }
 
-window.loadSaved     = loadSaved;
-window.loadSavedList = loadSavedList;
-window.deleteSaved   = deleteSaved;
-window.sbCall        = sbCall;
-window.renamePeriod  = renamePeriod;
+function handleLogoUpload(input){
+  const file=input.files[0];
+  if(!file)return;
+  if(file.size>2*1024*1024){showToast('Logo 2MB\'dan küçük olmalı','error');return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    S.logoDataUrl=e.target.result;
+    const box=document.getElementById('logoPreviewBox');
+    const status=document.getElementById('logoStatus');
+    const clearBtn=document.getElementById('logoClearBtn');
+    if(box)box.innerHTML=`<img src="${S.logoDataUrl}" style="max-width:76px;max-height:46px;object-fit:contain">`;
+    if(status)status.textContent='✓ Logo yüklendi';
+    if(clearBtn)clearBtn.style.display='';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearLogo(){
+  S.logoDataUrl=null;
+  const box=document.getElementById('logoPreviewBox');
+  const status=document.getElementById('logoStatus');
+  const clearBtn=document.getElementById('logoClearBtn');
+  if(box)box.innerHTML='Logo Yükle';
+  if(status)status.textContent='PNG, JPG, SVG — maks. 2MB';
+  if(clearBtn)clearBtn.style.display='none';
+  const inp=document.getElementById('rpr_logo_inp');
+  if(inp)inp.value='';
+}
+
+// ─── GLOBAL BAĞLAMA ──────────────────────────────────────────────────────────
+window.sTab             = sTab;
+window.render           = render;
+window.rC               = rC;
+window.openMo           = openMo;
+window.closeMo          = closeMo;
+window.setAP            = setAP;
+window.remP             = remP;
+window.clToggle         = clToggle;
+window.clSifirla        = clSifirla;
+window.clTumunuSec      = clTumunuSec;
+window.toggleTheme      = toggleTheme;
+window.raporOnizle      = raporOnizle;
+window.loadSaved        = loadSaved;
+window.loadSavedList    = loadSavedList;
+window.deleteSaved      = deleteSaved;
+window.sbCall           = sbCall;
+window.renamePeriod     = renamePeriod;
 window.handleLogoUpload = handleLogoUpload;
-window.clearLogo     = clearLogo;
-window.uF            = uF;
-window.loadSaved     = loadSaved;
-window.loadSavedList = loadSavedList;
-window.deleteSaved   = deleteSaved;
-window.sbCall        = sbCall;
-window.renamePeriod  = renamePeriod;
-window.handleLogoUpload = handleLogoUpload;
-window.clearLogo     = clearLogo;
-window.uF            = uF;
-window.rC            = typeof rC==='function'?rC:function(){};
+window.clearLogo        = clearLogo;
+window.uF               = uF;
+window.initTheme        = initTheme;
 </script>
 </body>
 </html>
