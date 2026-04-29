@@ -2457,6 +2457,109 @@ function rChecklist(el) {
 
 // ─── BAŞLAT ───────────────────────────────────────────────────────────────────
 // Auth fonksiyonlarını global scope'a bağla (inline onclick handler'lar için zorunlu)
+// ─── SUPABASE API ────────────────────────────────────────────────────────────
+async function sbCall(action, data={}){
+  if(!S.user) return {error:'Oturum yok'};
+  let token='';
+  try{
+    const cu = getGoTrue().currentUser();
+    if(cu) token = await cu.jwt();
+  }catch(e){}
+  try{
+    const r = await fetch('/api/supabase',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({action, data})
+    });
+    return r.json();
+  }catch(e){
+    showToast('Bağlantı hatası: '+e.message,'error');
+    return {error:e.message};
+  }
+}
+
+// ─── KAYITLI ANALİZLER ───────────────────────────────────────────────────────
+async function loadSavedList(){
+  if(!S.user) return;
+  const res = await sbCall('list');
+  if(res && res.data) S.savedList = res.data;
+  else S.savedList = [];
+  // Kayıtlı sekme açıksa yenile
+  const stab = document.getElementById('savedTab');
+  if(stab) rSaved(stab);
+}
+
+function loadSaved(id){
+  const item = S.savedList.find(x=>x.id===id);
+  if(!item) return;
+  const donemAdi = item.donem||item.sirket_adi||'Kayıtlı Analiz';
+
+  // e-Defter kaydı mı?
+  if(item.rasyo_json&&item.rasyo_json['__tip']==='edefter'){
+    try{
+      S.ed.dosyaAdi = item.dosya_adi||'e-Defter';
+      S.ed.aiYorum  = item.ai_yorum||'';
+      S.ed.anomaliler = JSON.parse(item.rasyo_json['__anomaliler']||'[]');
+      S.ed.hesapOzet  = JSON.parse(item.rasyo_json['__hesapOzet']||'[]');
+      S.ed.ozet = {
+        toplamFis:     item.rasyo_json['__fisler']||0,
+        toplamSatir:   item.rasyo_json['__satirlar']||0,
+        toplamBorç:    item.rasyo_json['__borc']||0,
+        toplamAlacak:  item.rasyo_json['__alacak']||0,
+        anomaliSayisi: item.rasyo_json['__anomali']||0,
+        donemBas:      item.rasyo_json['__donemBas']||'',
+        donemBit:      item.rasyo_json['__donemBit']||'',
+      };
+      S.ed.log = [{t:'ok',m:'📂 Kayıtlı e-Defter analizi yüklendi: '+donemAdi}];
+    }catch(e){console.warn('e-Defter yükleme hatası:',e);}
+    S.tab='edefter'; render(); return;
+  }
+
+  // Normal analiz
+  const mevcutDolu = S.periods[S.ap]&&Object.values(S.periods[S.ap].data).some(v=>v&&v!=='0');
+  if(mevcutDolu){
+    S.periods.push({name:donemAdi,data:eD(),fileName:null,parseLog:[],missingFields:[]});
+    S.ap = S.periods.length-1;
+  } else {
+    S.periods[S.ap].name = donemAdi;
+  }
+  const idx = S.ap;
+  S.periods[idx].data = eD();
+  const fieldKeys = new Set(FIELDS.flatMap(s=>s.fields).map(f=>f.key));
+  if(item.rasyo_json){
+    Object.keys(item.rasyo_json).forEach(k=>{
+      if(fieldKeys.has(k)){
+        const v=item.rasyo_json[k];
+        if(v!==undefined&&v!==null&&v!=='') S.periods[idx].data[k]=String(v);
+      }
+    });
+  }
+  if(item.sektor){S.sektor=item.sektor;const sel=document.getElementById('sektorSel');if(sel)sel.value=item.sektor;updateSectorBadge();}
+  S.aiRes = item.ai_yorum||'';
+  S.periods[idx].parseLog = [{t:'ok',m:'📂 Kayıtlı analiz yüklendi: '+donemAdi}];
+  if(item.dosya_adi) S.periods[idx].parseLog.push({t:'info',m:'📎 '+item.dosya_adi});
+  S.periods[idx].fileName = null; S.periods[idx].missingFields = [];
+  const dolular = Object.values(S.periods[idx].data).filter(v=>v&&v!=='0').length;
+  S.periods[idx].parseLog.push({t:'ok',m:dolular+' alan yüklendi'});
+  if(item.rasyo_json&&item.rasyo_json['__isMizan']){
+    S.periods[idx].isMizan=true;
+    try{const acctsStr=item.rasyo_json['__accts'];if(acctsStr)S.periods[idx].mizanAccts=JSON.parse(acctsStr);S.periods[idx].mizanDetay={};}catch(e){}
+  }
+  S.tab='input'; render();
+}
+
+async function deleteSaved(id){
+  if(!confirm('Bu analizi silmek istiyor musunuz?')) return;
+  const res = await sbCall('delete',{id});
+  if(res&&!res.error){
+    S.savedList = S.savedList.filter(x=>x.id!==id);
+    showToast('Analiz silindi','success',2500);
+    render();
+  } else {
+    showToast('Silme hatası: '+(res?.error||'Bilinmeyen hata'),'error');
+  }
+}
+
 window.sTab          = sTab;
 window.render        = render;
 window.rC            = rC;
@@ -2468,9 +2571,149 @@ window.clToggle      = clToggle;
 window.clSifirla     = clSifirla;
 window.clTumunuSec   = clTumunuSec;
 window.toggleTheme   = toggleTheme;
-window.raporOnizle   = raporOnizle;
+// ─── PDF RAPOR ───────────────────────────────────────────────────────────────
+function raporOnizle(){
+  const aktifDonemler=S.periods.filter(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0'));
+  if(!aktifDonemler.length){showToast('Bilanço/Gelir Tablosu verisi bulunamadı','error');return;}
+  const _origAP=S.ap;
+  const bilancoIdx=S.periods.indexOf(aktifDonemler[0]);
+  S.ap=bilancoIdx;
+  const p=S.periods[S.ap];const d=nd(p);
+  const sirket=document.getElementById('rpr_sirket')?.value||p.fileName?.replace(/\.[^/.]+$/,'')||'';
+  const hazir=document.getElementById('rpr_hazirlayan')?.value||'';
+  const donem=document.getElementById('rpr_donem')?.value||p.name||'';
+  const tarih=document.getElementById('rpr_tarih')?.value||new Date().toLocaleDateString('tr-TR');
+  const incRatios=document.getElementById('rpr_ratios')?.checked!==false;
+  const incKredi=document.getElementById('rpr_kredi')?.checked!==false;
+  const incCompare=document.getElementById('rpr_compare')?.checked&&aktifDonemler.length>=2;
+  const incAI=document.getElementById('rpr_ai')?.checked&&!!S.aiRes;
+  const logoHtml=S.logoDataUrl?`<img src="${S.logoDataUrl}" style="max-height:50px;max-width:150px;object-fit:contain">`:'';
+
+  // Rasyo formatlama yardımcıları
+  const fR2=v=>{if(v===null||v===undefined)return'—';return Number(v).toFixed(2)};
+  const fP2=v=>{if(v===null||v===undefined)return'—';return'%'+Number(v).toFixed(2)};
+  const fC2=v=>{if(!v&&v!==0)return'—';return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(v))+' ₺'};
+  const rCls=((k,v)=>{const r=Object.values(RATIOS).flatMap(c=>c.items).find(x=>x.key===k);if(!r||v===null)return'neu';if(r.good){if(r.good(v))return'good';if(r.bad&&r.bad(v))return'bad';return'mid';}return'neu';});
+
+  let body='';
+
+  // Kapak
+  body+=`<div class="page cover-page">
+    <div class="cover-header"><span class="brand">Mizan Mind</span>${logoHtml?`<div class="cover-logo">${logoHtml}</div>`:'<span class="cover-badge">Finansal Analiz Raporu</span>'}</div>
+    <div class="cover-center"><div class="cover-eyebrow">FİNANSAL ANALİZ RAPORU</div><div class="cover-company">${sirket||'Şirket'}</div></div>
+    <div class="cover-grid">
+      <div class="cover-cell"><div class="cell-label">Dönem</div><div class="cell-val">${donem||'—'}</div></div>
+      <div class="cover-cell"><div class="cell-label">Tarih</div><div class="cell-val">${tarih}</div></div>
+      <div class="cover-cell"><div class="cell-label">Hazırlayan</div><div class="cell-val">${hazir||'—'}</div></div>
+      <div class="cover-cell"><div class="cell-label">Sektör</div><div class="cell-val">${S.sektor||'Genel'}</div></div>
+    </div>
+    <div class="cover-footer">Bu rapor Mizan Mind platformu tarafından otomatik oluşturulmuştur. Yatırım tavsiyesi niteliği taşımaz.</div>
+  </div>`;
+
+  // Rasyolar
+  if(incRatios){
+    Object.entries(RATIOS).forEach(([,cat])=>{
+      const items=cat.items.filter(r=>r.calc(d)!==null);
+      if(!items.length)return;
+      body+=`<div class="page"><div class="ph"><div class="ph-title">${cat.icon} ${cat.label}</div><div class="ph-sub">${sirket}</div></div><div class="pb">`;
+      body+=`<table class="rt"><colgroup><col style="width:38%"><col style="width:20%"><col style="width:22%"><col style="width:20%"></colgroup>
+        <thead><tr><th style="text-align:left">Rasyo</th><th>Değer</th><th>İdeal</th><th>Durum</th></tr></thead><tbody>`;
+      items.forEach(r=>{
+        const v=r.calc(d);const cls=rCls(r.key,v);
+        const fmt=v===null?'—':r.pct?fP2(v):r.cur?fC2(v):fR2(v);
+        const colors={'good':'#16a34a','mid':'#d97706','bad':'#dc2626','neu':'#64748b'};
+        body+=`<tr><td class="rn">${r.name}${r.formula?`<span class="rf">${r.formula}</span>`:''}</td>
+          <td class="rv" style="color:${colors[cls]||'#1e293b'}">${fmt}</td>
+          <td class="ri">${r.ideal||'—'}</td>
+          <td class="rs ${cls}">${cls==='good'?'✓ İyi':cls==='bad'?'✗ Zayıf':cls==='mid'?'⚠ Orta':'—'}</td></tr>`;
+      });
+      body+=`</tbody></table></div></div>`;
+    });
+  }
+
+  // Kredi
+  if(incKredi){
+    const BDDK=[
+      {n:'Cari Oran',key:'currentRatio',ideal:'≥ 1.5'},
+      {n:'Borç/Özsermaye',key:'debtToEquity',ideal:'≤ 2.0'},
+      {n:'Faiz Karşılama',key:'interestCoverage',ideal:'≥ 3.0'},
+      {n:'Net Kâr Marjı',key:'netProfitMargin',ideal:'≥ %5'},
+    ];
+    body+=`<div class="page"><div class="ph"><div class="ph-title">🏦 Kredi Analizi</div><div class="ph-sub">${sirket}</div></div><div class="pb">`;
+    body+=`<table class="rt"><colgroup><col style="width:36%"><col style="width:20%"><col style="width:20%"><col style="width:24%"></colgroup>
+      <thead><tr><th style="text-align:left">Kriter</th><th>Değer</th><th>İdeal</th><th>Durum</th></tr></thead><tbody>`;
+    BDDK.forEach(k=>{
+      const r=Object.values(RATIOS).flatMap(c=>c.items).find(x=>x.key===k.key);
+      if(!r)return;
+      const v=r.calc(d);const cls=rCls(k.key,v);
+      const fmt=v===null?'—':r.pct?fP2(v):r.cur?fC2(v):fR2(v);
+      const colors={'good':'#16a34a','mid':'#d97706','bad':'#dc2626','neu':'#64748b'};
+      body+=`<tr><td class="rn">${k.n}</td>
+        <td class="rv" style="color:${colors[cls]||'#1e293b'}">${fmt}</td>
+        <td class="ri">${k.ideal}</td>
+        <td class="rs ${cls}">${cls==='good'?'✓ Uygun':cls==='bad'?'✗ Yetersiz':'⚠ Sınırda'}</td></tr>`;
+    });
+    body+=`</tbody></table></div></div>`;
+  }
+
+  // Karşılaştırma
+  if(incCompare){
+    const aR2=Object.values(RATIOS).flatMap(c=>c.items);
+    const pCount=aktifDonemler.length;
+    const rasyoW=Math.max(28,48-pCount*3);
+    const donemW=Math.floor((100-rasyoW)/pCount);
+    const colDefs=`<col style="width:${rasyoW}%">${aktifDonemler.map(()=>`<col style="width:${donemW}%">`).join('')}`;
+    body+=`<div class="page"><div class="ph"><div class="ph-title">⚖️ Dönemsel Karşılaştırma</div><div class="ph-sub">${sirket}</div></div><div class="pb">`;
+    body+=`<table style="table-layout:fixed;width:100%;border-collapse:collapse;font-size:7.5pt"><colgroup>${colDefs}</colgroup>
+      <thead><tr style="background:#1e3a5f;color:#fff">
+        <th style="text-align:left;padding:8px 10px">Rasyo</th>
+        ${aktifDonemler.map(pp=>`<th style="text-align:center;padding:8px 6px">${pp.name||'Dönem'}</th>`).join('')}
+      </tr></thead><tbody>`;
+    aR2.forEach(r=>{
+      const vals=aktifDonemler.map(pp=>r.calc(nd(pp)));
+      if(vals.every(v=>v===null))return;
+      const colors={'good':'#16a34a','mid':'#d97706','bad':'#dc2626','neu':'#64748b'};
+      body+=`<tr><td style="text-align:left;padding:7px 10px;font-weight:500;border-bottom:1px solid #e2e8f0">${r.name}</td>
+        ${vals.map(v=>{const cls=rCls(r.key,v);const fmt=v===null?'—':r.pct?fP2(v):r.cur?fC2(v):fR2(v);
+          return`<td style="text-align:center;padding:7px 6px;font-weight:700;border-bottom:1px solid #e2e8f0;color:${colors[cls]||'#1e293b'}">${fmt}</td>`;
+        }).join('')}</tr>`;
+    });
+    body+=`</tbody></table></div></div>`;
+  }
+
+  // AI Yorum
+  if(incAI&&S.aiRes){
+    body+=`<div class="page"><div class="ph"><div class="ph-title">🤖 AI Uzman Değerlendirmesi</div><div class="ph-sub">${sirket}</div></div><div class="pb">
+      <div class="ai-box">${S.aiRes.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+    </div></div>`;
+  }
+
+  // PDF penceresi
+  const _pdfCSS=`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;font-size:9pt;line-height:1.5}.page{background:#fff;width:210mm;min-height:297mm;margin:0 auto 8mm;padding:14mm;box-shadow:0 2px 12px rgba(0,0,0,.08);page-break-after:always}.cover-page{background:linear-gradient(160deg,#0f172a 0%,#1e3a5f 60%,#0f172a 100%);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:16mm}.cover-header{display:flex;justify-content:space-between;align-items:center}.brand{font-size:18pt;font-weight:800;color:#fff}.cover-badge{font-size:7pt;color:#93c5fd;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(147,197,253,.3);padding:3px 8px;border-radius:16px}.cover-center{flex:1;display:flex;flex-direction:column;justify-content:center;padding:10mm 0 6mm}.cover-eyebrow{font-size:7pt;letter-spacing:4px;text-transform:uppercase;color:#64748b;margin-bottom:8px}.cover-company{font-size:24pt;font-weight:800;line-height:1.1;color:#f8fafc}.cover-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:6mm}.cover-cell{}.cell-label{font-size:6pt;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.cell-val{font-size:9pt;font-weight:600;color:#e2e8f0}.cover-footer{font-size:6.5pt;color:#475569;margin-top:4mm;padding-top:3mm;border-top:1px solid rgba(255,255,255,.06)}.cover-logo{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px}.ph{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:3px solid #1e40af;margin-bottom:14px}.ph-title{font-size:14pt;font-weight:700;color:#0f172a}.ph-sub{font-size:7.5pt;color:#94a3b8}.rt{width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:12px;table-layout:fixed}.rt thead tr{background:#1e3a5f;color:#fff}.rt th{padding:5px 6px;font-size:7pt;font-weight:700;text-align:center;overflow:hidden;white-space:nowrap}.rt th:first-child{text-align:left;padding-left:8px}.rt tbody tr:nth-child(even){background:#f8fafc}.rt td{padding:5px 6px;border-bottom:1px solid #e2e8f0;vertical-align:middle;text-align:center;overflow:hidden;white-space:nowrap;font-size:7.5pt}.rn{font-weight:500;color:#1e293b;text-align:left!important;white-space:normal!important;word-break:break-word;padding-left:8px!important}.rf{display:block;font-size:6pt;color:#94a3b8;font-family:monospace}.ri{font-size:7pt;color:#94a3b8;text-align:center!important}.rs{font-size:7pt;font-weight:700;text-align:center!important}.rv{font-weight:700;text-align:center!important}.good{color:#16a34a}.mid{color:#d97706}.bad{color:#dc2626}.neu{color:#64748b}.ai-box{background:#f8fafc;border-left:4px solid #3b82f6;border-radius:0 6px 6px 0;padding:12px 14px;font-size:9pt;line-height:1.8;color:#334155}@media print{body{background:#fff}.page{box-shadow:none;margin:0;page-break-after:always}.page:last-child{page-break-after:avoid}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}@page{size:A4;margin:0}`;
+  const _pdfDoc='<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>'+sirket+' \u2014 Rapor<\/title><style>'+_pdfCSS+'<\/style><\/head><body>'+body+'<scr'+'ipt>setTimeout(()=>{window.focus();window.print()},600)<\/scr'+'ipt><\/body><\/html>';
+  const win=window.open('','_blank','width=960,height=750');
+  win.document.write(_pdfDoc);
+  win.document.close();
+  S.ap=_origAP;
+}
+
 window.loadSaved     = loadSaved;
+window.loadSavedList = loadSavedList;
 window.deleteSaved   = deleteSaved;
+window.sbCall        = sbCall;
+window.renamePeriod  = renamePeriod;
+window.handleLogoUpload = handleLogoUpload;
+window.clearLogo     = clearLogo;
+window.uF            = uF;
+window.loadSaved     = loadSaved;
+window.loadSavedList = loadSavedList;
+window.deleteSaved   = deleteSaved;
+window.sbCall        = sbCall;
+window.renamePeriod  = renamePeriod;
+window.handleLogoUpload = handleLogoUpload;
+window.clearLogo     = clearLogo;
+window.uF            = uF;
+window.rC            = typeof rC==='function'?rC:function(){};
 </script>
 </body>
 </html>
