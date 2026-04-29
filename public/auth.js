@@ -579,24 +579,17 @@ async function authForgot(){
   }catch(e){authShowMsg('Gönderilemedi: '+(e?.message||''),'err');}
 }
 
-function authGoogle(){
+async function authGoogle(){
   try{
-    // Mevcut oturumu kapat — önceki kullanıcı bilgisi temizlenir
     const gt = getGoTrue();
     const cu = gt.currentUser();
-    const doRedirect = () => {
-      const url = gt.loginExternalUrl('google');
-      // GoTrue redirect_to'ya prompt parametresi ekle
-      const sep = url.includes('?') ? '&' : '?';
-      // OAuth state ile Google'a prompt=select_account gönder
-      window.location.href = url + sep + 'prompt=select_account';
-    };
-    if(cu){
-      // Önce logout yap, sonra Google'a yönlendir
-      cu.logout().catch(()=>{}).finally(doRedirect);
-    } else {
-      doRedirect();
-    }
+    // Sunucu oturumunu arka planda kapat (token geçerliyken başlatılmalı)
+    if(cu) cu.logout().catch(()=>{});
+    // Yerel oturumu hemen senkron sil
+    localStorage.removeItem('gotrue.user');
+    // Netlify Function: GoTrue redirect'ini yakalar, prompt=select_account ekler
+    // (GoTrue doğrudan bu parametreyi Google'a iletmez)
+    window.location.assign('/api/google-auth');
   }catch(e){
     authShowMsg('Google girişi başlatılamadı: '+e.message,'err');
   }
