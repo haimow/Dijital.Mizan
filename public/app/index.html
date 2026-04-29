@@ -620,7 +620,20 @@ if(c3&&activePeriod){
   sCh.push(new Chart(c3,{type:'bar',data:{labels:['Dönen V.','Duran V.','Kısa V.Y.','Uzun V.Y.','Özsermaye'],datasets:[{data:[l.currentAssets||0,l.fixedAssets||0,l.shortTermLiabilities||0,l.longTermLiabilities||0,l.equity||0],backgroundColor:['rgba(59,130,246,.8)','rgba(99,160,246,.6)','rgba(239,68,68,.7)','rgba(239,120,120,.5)','rgba(16,185,129,.7)'],borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return fC(ctx.raw)}}}},scales:{x:{ticks:{color:'#546078',font:{size:9},callback:function(v){return fCS(v)}},grid:{color:'rgba(35,46,72,.4)'}},y:{ticks:{color:'#8494b2',font:{size:9}},grid:{display:false}}}}}));
 }
 }
-function rC(){document.querySelectorAll('.mtab').forEach(t=>t.classList.toggle('on',t.dataset.mt===S.tab));const el=document.getElementById('cont');if(S.tab==='input')rInp(el);else if(S.tab==='ratios')rRat(el);else if(S.tab==='compare')rCmp(el);else if(S.tab==='detay')rDetay(el);else if(S.tab==='kredi')rKredi(el);else if(S.tab==='rapor')rRapor(el);else if(S.tab==='takvim')rTakvim(el);else if(S.tab==='edefter')rEDefter(el);else if(S.tab==='checklist')rChecklist(el);else rAI(el)}
+function rC(){
+  const hasMizan=S.periods.some(p=>p.isMizan&&Object.keys(p.mizanAccts||{}).length>0);
+  const hasBilanco=S.periods.some(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0'));
+  const hasEdefter=!!(S.ed?.dosyaAdi||S.ed?.fisler?.length||S.ed?.ozet?.toplamFis);
+  document.querySelectorAll('.mtab').forEach(t=>{
+    const mt=t.dataset.mt;
+    t.classList.toggle('on',mt===S.tab);
+    // Mizan seçili iken detay=aktif, kredi=deaktif
+    // e-Defter sekmesi — sadece yüklüyse aktif
+    const isDisabled=(mt==='edefter'&&!hasEdefter);
+    t.style.opacity=isDisabled?'0.35':'';
+    t.style.cursor=isDisabled?'not-allowed':'';
+    t.title=isDisabled?'Önce e-Defter XML yükleyin':'';
+  });const el=document.getElementById('cont');if(S.tab==='input')rInp(el);else if(S.tab==='ratios')rRat(el);else if(S.tab==='compare')rCmp(el);else if(S.tab==='detay')rDetay(el);else if(S.tab==='kredi')rKredi(el);else if(S.tab==='rapor')rRapor(el);else if(S.tab==='takvim')rTakvim(el);else if(S.tab==='edefter')rEDefter(el);else if(S.tab==='checklist')rChecklist(el);else rAI(el)}
 function rInp(el){const p=S.periods[S.ap];const logH=p.parseLog.length?`<div class="plog">${p.parseLog.map(l=>`<div class="${l.t}">${l.t==='ok'?'✓':l.t==='warn'?'⚠':l.t==='err'?'✗':'ℹ'} ${l.m}</div>`).join('')}</div>`:'';
 const hasData=p.fileName&&Object.values(p.data).some(v=>v);
 const guidance=hasData?`<div style="margin-top:10px;padding:10px 14px;background:var(--acd);border:1px solid rgba(var(--ac-rgb,59 130 246)/.2);border-radius:6px;font-size:11px;color:var(--ac)">💡 Farklı bir dönem analiz etmek için yukarıdaki <strong>"+ Dönem Ekle"</strong> butonunu kullanın. Dönem adını çift tıklayarak düzenleyebilirsiniz.</div>`:'';
@@ -976,7 +989,16 @@ let moMode='add'; // 'add', 'rename', 'fileUpload'
 let moCallback=null;
 let pendingFile=null;
 
-function sTab(t){S.tab=t;rC()}
+function sTab(t){
+  const hasMizan=S.periods.some(p=>p.isMizan&&Object.keys(p.mizanAccts||{}).length>0);
+  const hasBilanco=S.periods.some(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0'));
+  const hasEdefter=!!(S.ed?.dosyaAdi||S.ed?.fisler?.length||S.ed?.ozet?.toplamFis);
+  // Deaktif tab kontrolü
+  if(t==='edefter'&&!hasEdefter){
+    showToast('e-Defter sekmesi için önce e-Defter XML yükleyin','warning',3000);return;
+  }
+  S.tab=t;rC();
+}
 function sSTab(t){S.stab=t;rSB()}
 function tglSB(){S.sbo=!S.sbo;document.getElementById('sidebar').classList.toggle('collapsed',!S.sbo);uT()}
 function tCat(c){S.ecat=S.ecat===c?null:c;rSB()}
@@ -2463,14 +2485,24 @@ function rRat(el){
   const p=S.periods[S.ap]; const d=nd(p);
   const hasBilanco=Object.values(p.data).some(v=>v&&v!=='0');
   if(p.isMizan){
+    const bilancoVarMi=S.periods.some(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0'));
     el.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:36px">
       <div style="font-size:32px;margin-bottom:12px">📋</div>
       <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:8px">Mizan'dan Rasyo Hesabı Yapılamaz</div>
-      <div style="font-size:11px;color:var(--t2);line-height:1.8;max-width:400px;margin:0 auto">
+      <div style="font-size:11px;color:var(--t2);line-height:1.8;max-width:420px;margin:0 auto">
         Rasyo analizi için <b>Bilanço</b> veya <b>Kurumlar Beyannamesi</b> verisi gereklidir.<br>
-        Yüklemek için <b>Veri Girişi</b> sekmesine gidin.
+        ${bilancoVarMi
+          ? '<b style="color:var(--am)">⚡ Dönemler bölümünde yüklü beyanname dönemleriniz var!</b><br>Üstteki dönem butonlarından bir beyanname dönemi seçin.'
+          : 'Yüklemek için <b>Veri Girişi</b> sekmesine gidin.'}
       </div>
-      <button class="btn btn-p" onclick="sTab('input')" style="margin-top:16px">📥 Veri Girişi</button>
+      ${bilancoVarMi
+        ? `<div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+            ${S.periods.filter(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0')).map((pp,i)=>{
+              const idx=S.periods.indexOf(pp);
+              return `<button class="btn btn-p" onclick="S.ap=${idx};rC()" style="font-size:11px">${pp.name||'Dönem '+(idx+1)}</button>`;
+            }).join('')}
+           </div>`
+        : `<button class="btn btn-p" onclick="sTab('input')" style="margin-top:16px">📥 Veri Girişi</button>`}
     </div></div>`;
     return;
   }
