@@ -649,14 +649,15 @@ function showApp(user){
   S.user=user;
   document.getElementById('authOverlay').style.display='none';
   document.getElementById('app').style.display='flex';
-  startTokenRefresh(); // Token auto-refresh başlat
+  startTokenRefresh();
   const email=user.email||'';
   const name=user.user_metadata?.full_name||email.split('@')[0]||'Kullanıcı';
   const av=document.getElementById('userAv');const nm=document.getElementById('userNm');
   if(av)av.textContent=(name.charAt(0)||'U').toUpperCase();
   if(nm)nm.textContent=name+' · '+email;
-  loadSavedList();
-  render();
+  // loadSavedList ana script'te tanımlı, window üzerinden çağır
+  if(typeof window.loadSavedList==='function') window.loadSavedList();
+  if(typeof window.render==='function') window.render();
 }
 
 function doLogout(){
@@ -679,6 +680,6 @@ window.showApp        = showApp;
 window.showAuthOverlay = showAuthOverlay;
 
 document.addEventListener('DOMContentLoaded', function() {
+  if (typeof window.initTheme === 'function') window.initTheme();
   if (typeof initAuth === 'function') initAuth();
-  if (typeof initTheme === 'function') initTheme();
 });
