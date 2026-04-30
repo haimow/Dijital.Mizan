@@ -101,24 +101,6 @@ h1.hero-title em{font-style:italic;background:linear-gradient(135deg,#8ab4f8 0%,
 .feat-tag{display:inline-block;margin-top:12px;font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:4px;background:rgba(94,138,240,.1);color:var(--ac);border:1px solid rgba(94,138,240,.2)}
 .feat-tag.green{background:rgba(62,207,142,.08);color:var(--ac3);border-color:rgba(62,207,142,.2)}
 
-/* ── EDEFTER HIGHLIGHT ── */
-.edefter-section{padding:100px 24px;background:var(--bg2)}
-.edefter-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1.2fr;gap:80px;align-items:start}
-.edefter-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:6px;padding:4px 10px;font-size:10px;font-family:var(--mono);color:var(--ac3);letter-spacing:.5px;margin-bottom:18px}
-.edefter-badge::before{content:'◆';font-size:7px}
-.edefter-section h2{font-family:var(--serif);font-size:clamp(26px,3.5vw,44px);font-weight:400;letter-spacing:-1.5px;line-height:1.1;margin-bottom:16px}
-.edefter-section p{font-size:14px;color:var(--t2);line-height:1.75;font-weight:300;margin-bottom:24px}
-.edefter-specs{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
-.spec-row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--bg3);border-radius:8px;border:1px solid var(--brd)}
-.spec-key{font-family:var(--mono);font-size:10px;color:var(--ac);letter-spacing:.5px;min-width:80px;flex-shrink:0;margin-top:1px}
-.spec-val{font-size:12px;color:var(--t2);line-height:1.5;font-weight:300}
-.edefter-anomalies{background:var(--bg3);border:1px solid var(--brd);border-radius:14px;padding:28px}
-.anomaly-list{display:flex;flex-direction:column;gap:8px;margin-top:18px}
-.anomaly-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid transparent;transition:border-color .2s,background .2s;cursor:default}
-.anomaly-item:hover{background:var(--bg4);border-color:var(--brd)}
-.anomaly-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.anomaly-name{font-size:13px;color:var(--t2);font-weight:300}
-.anomaly-badge{margin-left:auto;font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:3px}
 
 /* ── HOW ── */
 .how{padding:100px 24px;background:var(--bg)}
@@ -187,7 +169,7 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
 
 @media(max-width:768px){
   nav{padding:0 20px}.nav-links{display:none}
-  .transform-inner,.edefter-inner,.cal-inner{grid-template-columns:1fr;gap:48px}
+  .transform-inner,.cal-inner{grid-template-columns:1fr;gap:48px}
   .feat-grid{grid-template-columns:1fr}.feat-cell.wide{grid-column:span 1}
   .steps-row{grid-template-columns:1fr 1fr}
   .plans{grid-template-columns:1fr}
@@ -205,7 +187,6 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
   </a>
   <div class="nav-links">
     <a href="#ozellikler">Özellikler</a>
-    <a href="#edefter">e-Defter</a>
     <a href="#nasil">Nasıl Çalışır</a>
     <a href="#fiyat">Fiyatlar</a>
   </div>
@@ -223,7 +204,7 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
     <h1 class="hero-title">
       Mizandan karara,<br><em>tek ekranda.</em>
     </h1>
-    <p class="hero-sub">Excel mizanınız, PDF bilançonuz veya e-Defter XML'iniz dakikalar içinde derin finansal analize dönüşür. Muhasebeciler için, muhasebeciler tarafından tasarlandı.</p>
+    <p class="hero-sub">Excel mizanınız veya PDF bilançonuz dakikalar içinde derin finansal analize dönüşür. Muhasebeciler için, muhasebeciler tarafından tasarlandı.</p>
     <div class="hero-actions">
       <a href="/app" class="btn-solid">Hemen Başla — Ücretsiz</a>
       <a href="#ozellikler" class="btn-ghost">Özellikleri Gör</a>
@@ -231,7 +212,6 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
     <div class="hero-numbers">
       <div class="hn-item"><div class="hn-val">20+</div><div class="hn-lbl">Finansal Rasyo</div></div>
       <div class="hn-item"><div class="hn-val">10</div><div class="hn-lbl">Sektör Benchmark</div></div>
-      <div class="hn-item"><div class="hn-val">XML</div><div class="hn-lbl">e-Defter Desteği</div></div>
       <div class="hn-item"><div class="hn-val">AI</div><div class="hn-lbl">Uzman Yorum</div></div>
     </div>
   </div>
@@ -243,7 +223,7 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
     <div class="transform-text">
       <div class="eyebrow">Dönüşüm</div>
       <h2>Kağıt çağından<br><em>veri çağına</em></h2>
-      <p>Yüzlerce satırlık Excel tabloları, elle kontrol edilen PDF'ler, klasörler dolusu beyannameler... Artık hepsini bir tıklamayla analiz edebilirsiniz. Yapay zeka her hesabı okur, her anomaliyi işaretler.</p>
+      <p>Yüzlerce satırlık Excel tabloları, elle kontrol edilen PDF'ler, klasörler dolusu beyannameler... Artık hepsini bir tıklamayla analiz edebilirsiniz. Yapay zeka her hesabı okur, yorumu saniyeler içinde sunar.</p>
     </div>
     <div class="transform-visual">
       <canvas id="transform-canvas"></canvas>
@@ -297,81 +277,6 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
   </div>
 </section>
 
-<!-- EDEFTER SECTION -->
-<section class="edefter-section reveal" id="edefter">
-  <div class="edefter-inner">
-    <div>
-      <div class="edefter-badge">Yeni Özellik</div>
-      <h2>e-Defter<br>Anomali Analizi</h2>
-      <p>Yevmiye defterinizi XML veya ZIP olarak yükleyin. Her muhasebe fişini fatura bazında tarayarak mizanda görünmeyen hataları, yuvarlak tutarları ve şüpheli kayıtları tespit edin.</p>
-      <div class="edefter-specs">
-        <div class="spec-row">
-          <span class="spec-key">FORMAT</span>
-          <span class="spec-val">.xml (XBRL GL) veya .zip (defter + berat paketi)</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">KAPSAM</span>
-          <span class="spec-val">Yevmiye Defteri + Büyük Defter — aylık veya dönemsel</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">DERINLIK</span>
-          <span class="spec-val">Fatura bazlı kayıt, belge tipi, fiş tarihi, hesap çifti</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">ZORUNLULUK</span>
-          <span class="spec-val">1 Ocak 2025'ten itibaren bilanço esasına göre tüm mükellefler</span>
-        </div>
-      </div>
-      <a href="/app" class="btn-ghost" style="display:inline-block;margin-top:4px">Şimdi Dene →</a>
-    </div>
-    <div class="edefter-anomalies">
-      <div style="font-size:12px;font-family:var(--mono);color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Tespit Edilen Anomaliler</div>
-      <div style="font-family:var(--serif);font-size:22px;color:var(--t1);font-style:italic;margin-bottom:16px">Mizanda görünmeyenler</div>
-      <div class="anomaly-list">
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#ef4444"></div>
-          <span class="anomaly-name">Gece yarısı / mesai dışı kayıtlar</span>
-          <span class="anomaly-badge" style="background:rgba(239,68,68,.1);color:#ef4444">Yüksek Risk</span>
-        </div>
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#ef4444"></div>
-          <span class="anomaly-name">Yuvarlak tutar yoğunlaşması</span>
-          <span class="anomaly-badge" style="background:rgba(239,68,68,.1);color:#ef4444">Yüksek Risk</span>
-        </div>
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#f59e0b"></div>
-          <span class="anomaly-name">Aynı gün çoklu iptal fişi</span>
-          <span class="anomaly-badge" style="background:rgba(245,158,11,.1);color:#f59e0b">Orta Risk</span>
-        </div>
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#f59e0b"></div>
-          <span class="anomaly-name">Belge tipi eşleşmezliği</span>
-          <span class="anomaly-badge" style="background:rgba(245,158,11,.1);color:#f59e0b">Orta Risk</span>
-        </div>
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#f59e0b"></div>
-          <span class="anomaly-name">Tek taraflı düzeltme kaydı</span>
-          <span class="anomaly-badge" style="background:rgba(245,158,11,.1);color:#f59e0b">Orta Risk</span>
-        </div>
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#3ecf8e"></div>
-          <span class="anomaly-name">Hesap çifti tutarsızlıkları</span>
-          <span class="anomaly-badge" style="background:rgba(62,207,142,.08);color:#3ecf8e">Dikkat</span>
-        </div>
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#3ecf8e"></div>
-          <span class="anomaly-name">Ardışık numara atlama</span>
-          <span class="anomaly-badge" style="background:rgba(62,207,142,.08);color:#3ecf8e">Dikkat</span>
-        </div>
-        <div class="anomaly-item">
-          <div class="anomaly-dot" style="background:#5b8af0"></div>
-          <span class="anomaly-name">Dönem sonu yoğunlaşması</span>
-          <span class="anomaly-badge" style="background:rgba(91,138,240,.1);color:#5b8af0">Bilgi</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- HOW IT WORKS -->
 <section class="how reveal" id="nasil">
@@ -386,14 +291,14 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
         <div class="step-num">01</div>
         <span class="step-icon">📂</span>
         <h4>Dosyayı Yükle</h4>
-        <p>Excel mizan, PDF beyanname veya e-Defter XML. Sürükle & bırak.</p>
+        <p>Excel mizan veya PDF beyanname. Sürükle & bırak.</p>
         <div class="step-arrow">→</div>
       </div>
       <div class="step">
         <div class="step-num">02</div>
         <span class="step-icon">⚙️</span>
         <h4>AI Okur & Eşler</h4>
-        <p>THP hesapları otomatik tanınır, rasyolar hesaplanır, anomaliler tespit edilir.</p>
+        <p>THP hesapları otomatik tanınır, rasyolar hesaplanır, veriler yapılandırılır.</p>
         <div class="step-arrow">→</div>
       </div>
       <div class="step">
@@ -487,7 +392,7 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
         <div class="plan-divider"></div>
         <ul class="plan-items">
           <li>30 analiz / ay</li>
-          <li>PDF + Excel + e-Defter XML</li>
+          <li>PDF + Excel</li>
           <li>AI uzman yorum</li>
           <li>Sınırsız kayıt & bulut</li>
           <li>Vergi takvimi + e-posta</li>
@@ -505,7 +410,6 @@ footer{border-top:1px solid var(--brd);padding:32px 48px;display:flex;align-item
           <li>Sınırsız analiz</li>
           <li>5 kullanıcı hesabı</li>
           <li>Çoklu şirket portföyü</li>
-          <li>e-Defter anomali analizi</li>
           <li>Tüm özellikler</li>
           <li>Öncelikli destek</li>
         </ul>

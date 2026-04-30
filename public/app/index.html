@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
@@ -10,7 +10,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -227,7 +226,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg0);color:var(--t1);min-he
   <button class="btn" id="saveBtn" onclick="saveAnaliz()" style="font-size:11px" title="Bu analizi kaydet">💾 Kaydet</button>
 </div>
 <div class="pbar" id="pBar"></div>
-<div class="mtabs"><button class="mtab on" data-mt="input" onclick="sTab('input')">📥 Veri Girişi</button><button class="mtab" data-mt="ratios" onclick="sTab('ratios')">📊 Rasyolar</button><button class="mtab" data-mt="compare" onclick="sTab('compare')">⚖️ Karşılaştırma</button><button class="mtab" data-mt="ai" onclick="sTab('ai')">🤖 Uzman Yorum</button><button class="mtab" data-mt="detay" onclick="sTab('detay')">🔍 Detay Mizan</button><button class="mtab" data-mt="kredi" onclick="sTab('kredi')">🏦 Kredi Analizi</button><button class="mtab" data-mt="rapor" onclick="sTab('rapor')">📄 PDF Rapor</button><button class="mtab" data-mt="takvim" onclick="sTab('takvim')">📅 Takvim</button><button class="mtab" data-mt="edefter" onclick="sTab('edefter')">📋 e-Defter</button><button class="mtab" data-mt="checklist" onclick="sTab('checklist')">✅ Checklist</button></div>
+<div class="mtabs"><button class="mtab on" data-mt="input" onclick="sTab('input')">📥 Veri Girişi</button><button class="mtab" data-mt="ratios" onclick="sTab('ratios')">📊 Rasyolar</button><button class="mtab" data-mt="compare" onclick="sTab('compare')">⚖️ Karşılaştırma</button><button class="mtab" data-mt="ai" onclick="sTab('ai')">🤖 Uzman Yorum</button><button class="mtab" data-mt="detay" onclick="sTab('detay')">🔍 Detay Mizan</button><button class="mtab" data-mt="kredi" onclick="sTab('kredi')">🏦 Kredi Analizi</button><button class="mtab" data-mt="rapor" onclick="sTab('rapor')">📄 PDF Rapor</button><button class="mtab" data-mt="takvim" onclick="sTab('takvim')">📅 Takvim</button><button class="mtab" data-mt="checklist" onclick="sTab('checklist')">✅ Checklist</button></div>
 <div class="cont" id="cont"></div>
 </div>
 </div>
@@ -308,7 +307,7 @@ valuation:{label:"Değerleme",icon:"🏷️",items:[
 };
 
 // STATE
-const S={periods:[{name:"",data:{},fileName:null,parseLog:[]}],ap:0,tab:"input",stab:"formulas",sbo:true,ecat:null,aiRes:"",aiLd:false,sektor:"",user:null,savedList:[],logoDataUrl:null,ed:{fişler:[],özet:{},log:[],dosyaAdi:null,aiYorum:'',aiLd:false},cl:{aktifListe:'kurumlar',kaydedilen:{}}};
+const S={periods:[{name:"",data:{},fileName:null,parseLog:[]}],ap:0,tab:"input",stab:"formulas",sbo:true,ecat:null,aiRes:"",aiLd:false,sektor:"",user:null,savedList:[],logoDataUrl:null,cl:{aktifListe:'kurumlar',kaydedilen:{}}};
 function eD(){const d={};FIELDS.forEach(s=>s.fields.forEach(f=>d[f.key]=""));return d}
 S.periods[0].data=eD();
 
@@ -516,19 +515,9 @@ function rPB(){
   // Normal dönemler
   S.periods.forEach((p,i)=>{
     const label=p.name||'Dönem '+(i+1);
-    h+=`<button class="chip ${i===S.ap?'on':''}" onclick="setAP(${i});if(S.tab==='edefter')sTab('input')" ondblclick="renamePeriod(${i})" title="Çift tıkla: adını düzenle">${label}${p.fileName?'<span style="opacity:.6;font-size:9px;margin-left:1px">📎</span>':''}<span class="x" onclick="event.stopPropagation();remP(${i})">✕</span></button>`;
+    h+=`<button class="chip ${i===S.ap?'on':''}" onclick="setAP(${i})" ondblclick="renamePeriod(${i})" title="Çift tıkla: adını düzenle">${label}${p.fileName?'<span style="opacity:.6;font-size:9px;margin-left:1px">📎</span>':''}<span class="x" onclick="event.stopPropagation();remP(${i})">✕</span></button>`;
   });
-  // e-Defter chip — varsa göster
-  if(S.ed&&S.ed.dosyaAdi){
-    const isAktif=S.tab==='edefter';
-    h+=`<button class="chip ${isAktif?'on':''}" onclick="sTab('edefter')"
-      style="${isAktif?'':'border-color:var(--gn);color:var(--gn)'}"
-      title="e-Defter: ${S.ed.dosyaAdi}">
-      📋 ${S.ed.dosyaAdi.replace(/\.[^.]+$/,'').substring(0,20)}
-      <span style="opacity:.6;font-size:9px">e-D</span>
-      <span class="x" onclick="event.stopPropagation();if(confirm('e-Defter verisi temizlensin mi?')){S.ed={fişler:[],özet:{},log:[],dosyaAdi:null,aiYorum:'',aiLd:false,fisler:[],ozet:{},hesapOzet:[],anomaliler:[]};if(S.tab==='edefter')sTab('input');else render()}">✕</span>
-    </button>`;
-  }
+
   h+='<button class="chip add" onclick="openMo(\'add\')">+ Dönem Ekle</button>';
   b.innerHTML=h;
 }
@@ -623,20 +612,20 @@ if(c3&&activePeriod){
 function rC(){
   const hasMizan=S.periods.some(p=>p.isMizan&&Object.keys(p.mizanAccts||{}).length>0);
   const hasBilanco=S.periods.some(p=>!p.isMizan&&Object.values(p.data).some(v=>v&&v!=='0'));
-  const hasEdefter=!!(S.ed?.dosyaAdi||S.ed?.fisler?.length||S.ed?.ozet?.toplamFis);
+
   document.querySelectorAll('.mtab').forEach(t=>{
     const mt=t.dataset.mt;
     t.classList.toggle('on',mt===S.tab);
     t.style.opacity='';
     t.style.cursor='';
     t.title='';
-  });const el=document.getElementById('cont');if(S.tab==='input')rInp(el);else if(S.tab==='ratios')rRat(el);else if(S.tab==='compare')rCmp(el);else if(S.tab==='detay')rDetay(el);else if(S.tab==='kredi')rKredi(el);else if(S.tab==='rapor')rRapor(el);else if(S.tab==='takvim')rTakvim(el);else if(S.tab==='edefter')rEDefter(el);else if(S.tab==='checklist')rChecklist(el);else rAI(el)}
+  });const el=document.getElementById('cont');if(S.tab==='input')rInp(el);else if(S.tab==='ratios')rRat(el);else if(S.tab==='compare')rCmp(el);else if(S.tab==='detay')rDetay(el);else if(S.tab==='kredi')rKredi(el);else if(S.tab==='rapor')rRapor(el);else if(S.tab==='takvim')rTakvim(el);else if(S.tab==='checklist')rChecklist(el);else rAI(el)}
 function rInp(el){const p=S.periods[S.ap];const logH=p.parseLog.length?`<div class="plog">${p.parseLog.map(l=>`<div class="${l.t}">${l.t==='ok'?'✓':l.t==='warn'?'⚠':l.t==='err'?'✗':'ℹ'} ${l.m}</div>`).join('')}</div>`:'';
 const hasData=p.fileName&&Object.values(p.data).some(v=>v);
 const guidance=hasData?`<div style="margin-top:10px;padding:10px 14px;background:var(--acd);border:1px solid rgba(var(--ac-rgb,59 130 246)/.2);border-radius:6px;font-size:11px;color:var(--ac)">💡 Farklı bir dönem analiz etmek için yukarıdaki <strong>"+ Dönem Ekle"</strong> butonunu kullanın. Dönem adını çift tıklayarak düzenleyebilirsiniz.</div>`:'';
 
 // ── ONBOARDING: ilk açılışta veri yoksa göster ──────────────
-const isFirstVisit=!p.fileName&&!p.isMizan&&!Object.values(p.data).some(v=>v)&&!(S.ed?.fişler?.length||S.ed?.fisler?.length||0);
+const isFirstVisit=!p.fileName&&!p.isMizan&&!Object.values(p.data).some(v=>v);
 if(isFirstVisit){
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
 
@@ -647,8 +636,8 @@ if(isFirstVisit){
     <div style="font-size:12px;color:var(--tm);max-width:480px;margin:0 auto;line-height:1.6">Her belge farklı bir analiz derinliği sunar. Tek belgeyle başlayabilir, sonradan diğerlerini ekleyebilirsiniz.</div>
   </div>
 
-  <!-- 3 kart yan yana -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+  <!-- 2 kart yan yana -->
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
 
     <!-- Excel / PDF -->
     <div class="onb-card" onclick="sTab('input');setTimeout(()=>document.getElementById('fInp')?.click(),80)" style="cursor:pointer">
@@ -663,20 +652,6 @@ if(isFirstVisit){
         <span class="onb-chip">Detay Mizan</span>
       </div>
       <div class="onb-formats">.xlsx · .xls · .csv · .pdf</div>
-    </div>
-
-    <!-- e-Defter -->
-    <div class="onb-card" onclick="sTab('edefter');setTimeout(()=>document.getElementById('edInp')?.click(),80)" style="cursor:pointer">
-      <div class="onb-icon" style="background:rgba(34,200,151,.1)">📋</div>
-      <div class="onb-title">e-Defter XML</div>
-      <div class="onb-desc">GİB onaylı Yevmiye Defteri. Fatura bazında fiş analizi ve 30 kategoride anomali tespiti.</div>
-      <div class="onb-chips">
-        <span class="onb-chip onb-chip-gn">Anomali Tespiti</span>
-        <span class="onb-chip onb-chip-gn">KDV Kontrolü</span>
-        <span class="onb-chip onb-chip-gn">Fiş Analizi</span>
-        <span class="onb-chip onb-chip-gn">Gece Yarısı Kayıt</span>
-      </div>
-      <div class="onb-formats">.xml · .zip (yevmiye + berat)</div>
     </div>
 
     <!-- Manuel -->
@@ -700,39 +675,28 @@ if(isFirstVisit){
     <thead><tr>
       <th>Özellik</th>
       <th style="text-align:center">Excel / PDF</th>
-      <th style="text-align:center">e-Defter XML</th>
       <th style="text-align:center">Manuel</th>
     </tr></thead>
     <tbody>
       ${[
-        ['20+ Finansal Rasyo','✓','—','✓'],
-        ['Sankey Gelir Akışı','✓','—','✓'],
-        ['AI Uzman Yorumu','✓','✓','✓'],
-        ['Sektör Benchmark','✓','—','✓'],
-        ['Kredi & BDDK Skoru','✓','—','✓'],
-        ['Detay Mizan Analizi','✓ (mizan yüklendiyse)','—','—'],
-        ['Müşteri / Tedarikçi Analizi','✓ (mizan yüklendiyse)','—','—'],
-        ['DSO / DPO Hesabı','✓ (mizan yüklendiyse)','—','—'],
-        ['Fiş Bazlı Anomali (30 kategori)','—','✓','—'],
-        ['Duplicate Fiş Tespiti','—','✓','—'],
-        ['KDV Oran Kontrolü','—','✓','—'],
-        ['Mesai Dışı Kayıt Tespiti','—','✓','—'],
-        ['Vergi Takvimi','✓','✓','✓'],
-        ['PDF Rapor','✓','—','✓'],
-      ].map(([f,a,b,c])=>`<tr>
+        ['20+ Finansal Rasyo','✓','✓'],
+        ['Sankey Gelir Akışı','✓','✓'],
+        ['AI Uzman Yorumu','✓','✓'],
+        ['Sektör Benchmark','✓','✓'],
+        ['Kredi & BDDK Skoru','✓','✓'],
+        ['Detay Mizan Analizi','✓ (mizan yüklendiyse)','—'],
+        ['Müşteri / Tedarikçi Analizi','✓ (mizan yüklendiyse)','—'],
+        ['DSO / DPO Hesabı','✓ (mizan yüklendiyse)','—'],
+        ['Vergi Takvimi','✓','✓'],
+        ['PDF Rapor','✓','✓'],
+      ].map(([f,a,b])=>`<tr>
         <td style="font-size:12px">${f}</td>
         <td style="text-align:center;font-size:13px;color:${a.startsWith('✓')?'var(--gn)':'var(--t4)'}">${a}</td>
         <td style="text-align:center;font-size:13px;color:${b.startsWith('✓')?'var(--gn)':'var(--t4)'}">${b}</td>
-        <td style="text-align:center;font-size:13px;color:${c.startsWith('✓')?'var(--gn)':'var(--t4)'}">${c}</td>
       </tr>`).join('')}
     </tbody>
   </table>
   </div></div>
-
-  <!-- İpucu -->
-  <div style="padding:10px 16px;background:var(--acd);border:1px solid var(--acd);border-radius:8px;font-size:11px;color:var(--tm);text-align:center">
-    💡 <b>İpucu:</b> Aynı şirket için Excel mizan <i>ve</i> e-Defter XML birlikte yüklenirse en kapsamlı analizi elde edersiniz.
-  </div>
 
   </div>`;
 
@@ -1336,781 +1300,6 @@ function rTakvim(el){
   h+='</div>';
   el.innerHTML=h;
 }
-
-// ─── e-DEFTER ANALİZİ ─────────────────────────────────────────────────────────
-async function parseEDefterXML(file){
-  return new Promise((resolve)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      const txt=e.target.result;
-      const parser=new DOMParser();
-      const doc=parser.parseFromString(txt,'application/xml');
-      const parserErr=doc.querySelector('parsererror');
-      if(parserErr){resolve({ok:false,err:'XML parse hatası: '+parserErr.textContent.substring(0,100)});return;}
-
-      const ns={
-        'gl-cor':'http://www.xbrl.org/int/gl/cor/2006-10-25',
-        'gl-bus':'http://www.xbrl.org/int/gl/bus/2006-10-25'
-      };
-      const q=(el,tag,ns)=>el.getElementsByTagNameNS(ns,tag);
-      const t=(el,tag,nsUri)=>{const n=el.getElementsByTagNameNS(nsUri||'http://www.xbrl.org/int/gl/cor/2006-10-25',tag);return n.length?n[0].textContent.trim():''};
-
-      // Başlık bilgileri
-      const docInfo=doc.getElementsByTagNameNS('http://www.xbrl.org/int/gl/cor/2006-10-25','documentInfo');
-      let baslik={};
-      if(docInfo.length){
-        const di=docInfo[0];
-        baslik={
-          tip:t(di,'entriesType'),
-          uid:t(di,'uniqueID'),
-          donemBas:t(di,'periodCoveredStart'),
-          donemBit:t(di,'periodCoveredEnd'),
-          kaynak:t(di,'sourceApplication')
-        };
-      }
-
-      // Şirket bilgisi
-      let sirket={};
-      const entInfo=doc.getElementsByTagNameNS('http://www.xbrl.org/int/gl/bus/2006-10-25','name');
-      if(entInfo.length) sirket.ad=entInfo[0].textContent.trim();
-      const orgId=doc.getElementsByTagNameNS('http://www.xbrl.org/int/gl/bus/2006-10-25','organizationIdentifier');
-      if(orgId.length) sirket.vkn=orgId[0].textContent.trim();
-
-      // Fişleri parse et
-      const entryHeaders=doc.getElementsByTagNameNS('http://www.xbrl.org/int/gl/cor/2006-10-25','entryHeader');
-      const fisler=[];
-      let toplamBorç=0, toplamAlacak=0;
-      const hesaplar={};
-      const belgetipler={};
-      const gunler={};
-
-      Array.from(entryHeaders).forEach(eh=>{
-        const fisNo=t(eh,'entryNumber');
-        const tarih=t(eh,'entryDate');
-        const aciklama=t(eh,'entryComment');
-
-        // Saat anomalisi — comment alanında timestamp ara
-        const saatMatch=aciklama.match(/T(\d{2}):(\d{2})/);
-        const saat=saatMatch?parseInt(saatMatch[1]):null;
-        const mesaiDisi=saat!==null&&(saat>=23||saat<6);
-
-        const satirlar=[];
-        const details=eh.getElementsByTagNameNS('http://www.xbrl.org/int/gl/cor/2006-10-25','entryDetail');
-
-        Array.from(details).forEach(d=>{
-          const hesapKod=t(d,'accountMainID');
-          const altHesap=t(d,'accountSubID');
-          const altAcik=t(d,'accountSubDescription');
-          const tutar=parseFloat(t(d,'amount')||'0');
-          const dc=t(d,'debitCreditCode');
-          const belgeNo=t(d,'documentNumber');
-          const belgeTip=t(d,'documentType');
-          const belgeRef=t(d,'documentReference');
-          const detayAcik=t(d,'detailComment');
-
-          if(dc==='D') toplamBorç+=tutar;
-          else toplamAlacak+=tutar;
-
-          // Hesap bazlı özet
-          if(hesapKod){
-            if(!hesaplar[hesapKod]) hesaplar[hesapKod]={borç:0,alacak:0,fisSayisi:0,ad:altAcik||hesapKod};
-            if(dc==='D') hesaplar[hesapKod].borç+=tutar;
-            else hesaplar[hesapKod].alacak+=tutar;
-            hesaplar[hesapKod].fisSayisi++;
-          }
-
-          // Belge tipi sayımı
-          if(belgeTip){
-            belgetipler[belgeTip]=(belgetipler[belgeTip]||0)+1;
-          }
-
-          satirlar.push({hesapKod,altHesap,altAcik,tutar,dc,belgeNo,belgeTip,belgeRef,detayAcik});
-        });
-
-        // Gün bazlı yoğunlaşma
-        if(tarih){
-          if(!gunler[tarih]) gunler[tarih]=0;
-          gunler[tarih]++;
-        }
-
-        fisler.push({fisNo,tarih,aciklama,satirlar,mesaiDisi,saat});
-      });
-
-      // Hesap özeti — resolve'dan önce hesapOzet tanımla
-      const hesapOzet=Object.entries(hesaplar).map(([kod,v])=>({
-        kod,ad:v.ad,borç:v.borç,alacak:v.alacak,
-        bakiye:v.borç-v.alacak,fisSayisi:v.fisSayisi
-      })).sort((a,b)=>Math.abs(b.bakiye)-Math.abs(a.bakiye));
-
-      // ══════════════════════════════════════════════════════════
-      // ANOMALİ TESPİTİ — 37 Kategori
-      // ══════════════════════════════════════════════════════════
-      const anomaliler=[];
-      const push=(kategori,risk,emoji,aciklama,detay)=>anomaliler.push({kategori,risk,emoji,aciklama,detay});
-
-      // ── YARDIMCI FONKSİYONLAR ───────────────────────────────
-      const isTatil=(tarih)=>{
-        if(!tarih)return false;
-        const d=new Date(tarih);
-        const gun=d.getDay(); // 0=Pazar, 6=Cumartesi
-        return gun===0||gun===6;
-      };
-      const getSaat=(aciklama)=>{
-        const m=(aciklama||'').match(/T(\d{2}):(\d{2})/);
-        return m?parseInt(m[1]):null;
-      };
-      const isMesaiDisi=(aciklama)=>{
-        const s=getSaat(aciklama);
-        return s!==null&&(s>=22||s<6);
-      };
-      const BILINEN_HESAPLAR=new Set(['100','101','102','103','104','105','106','108','109','110','111','112','119','120','121','122','123','124','125','126','127','128','129','130','131','132','133','134','135','136','137','138','139','140','141','142','143','144','145','146','147','148','149','150','151','152','153','154','155','156','157','158','159','160','161','162','163','164','165','166','167','168','169','170','171','172','173','174','175','176','177','178','179','180','181','182','183','184','185','186','187','188','189','190','191','192','193','194','195','196','197','198','199','200','210','220','230','231','232','233','240','241','242','243','244','245','246','247','248','249','250','251','252','253','254','255','256','257','258','259','260','261','262','263','264','265','266','267','268','269','270','271','272','273','274','275','276','277','278','279','280','281','282','283','284','285','286','287','288','289','290','291','292','293','294','295','296','297','298','299','300','301','302','303','304','305','306','307','308','309','310','311','312','313','314','315','316','317','318','319','320','321','322','323','324','325','326','327','328','329','330','331','332','333','334','335','336','337','338','339','340','341','342','343','344','345','346','347','348','349','350','351','352','353','354','355','356','357','358','359','360','361','362','363','364','365','366','367','368','369','370','371','372','373','374','375','376','377','378','379','380','381','382','383','384','385','386','387','388','389','390','391','392','393','394','395','396','397','398','399','400','401','402','403','404','405','406','407','408','409','410','411','412','413','414','415','416','417','418','419','420','421','422','423','424','425','426','427','428','429','430','431','432','433','434','435','436','437','438','439','440','441','442','443','444','445','446','447','448','449','450','451','452','453','454','455','456','457','458','459','460','461','462','463','464','465','466','467','468','469','470','471','472','473','474','475','476','477','478','479','480','481','482','483','484','485','486','487','488','489','490','491','492','493','494','495','496','497','498','499','500','501','502','503','510','511','512','513','514','515','516','517','518','519','520','521','522','523','524','525','526','527','528','529','540','541','542','543','544','545','546','547','548','549','550','551','552','553','554','555','556','557','558','559','560','561','562','563','564','565','566','567','568','569','600','601','602','603','604','605','606','607','608','609','610','611','612','613','614','615','616','617','618','619','620','621','622','623','624','625','626','627','628','629','630','631','632','633','634','635','636','637','638','639','640','641','642','643','644','645','646','647','648','649','650','651','652','653','654','655','656','657','658','659','660','661','662','663','664','665','666','667','668','669','670','671','672','673','674','675','676','677','678','679','680','681','682','683','684','685','686','687','688','689','690','691','692','693','694','695','696','697','698','699','700','710','720','730','740','750','760','770','780','790','791','792','793','794','795','796','797','798','799','900','950','960','970','980','990']);
-
-      // ── 1. AÇILIŞ / KAPANIŞ FİŞLERİ ─────────────────────────
-      const acilislar=fisler.filter(f=>/(açılış|acilis|devir|opening|kapanış|kapanis|closing)/i.test(f.aciklama||''));
-      if(acilislar.length===0&&fisler.length>5){
-        push('Açılış Fişi Eksik','orta','📂','Dönem açılış/devir fişi tespit edilemedi','Yeni dönem bakiyesi açılış fişiyle başlamalı. 131/231 veya bilanço devirlerini kontrol edin.');
-      }
-      // ── 2. DÖNEM DEVIR KONTROLÜ ─────────────────────────────
-      // Açılış fişlerinde tek taraflı satır varsa
-      acilislar.forEach(f=>{
-        const tek=f.satirlar.filter(s=>s.dc==='D').length===0||f.satirlar.filter(s=>s.dc==='C').length===0;
-        if(tek)push('Tek Taraflı Devir','yuksek','⚠️',`Fiş #${f.fisNo}: Açılış/devir fişi tek taraflı`,`${f.aciklama} — borç veya alacak tarafı boş. Bakiye transferi hatalı olabilir.`);
-      });
-
-      // ── 3. DUPLICATE FİŞ NUMARASI ────────────────────────────
-      const fisNolar={};
-      fisler.forEach(f=>{
-        if(!f.fisNo)return;
-        if(!fisNolar[f.fisNo])fisNolar[f.fisNo]=[];
-        fisNolar[f.fisNo].push(f.tarih);
-      });
-      const dupFisler=Object.entries(fisNolar).filter(([,dates])=>dates.length>1);
-      if(dupFisler.length>0){
-        push('Duplicate Fiş Numarası','yuksek','🔁',`${dupFisler.length} fiş numarası birden fazla kullanılmış`,
-          dupFisler.slice(0,5).map(([no,dates])=>`Fiş#${no}: ${dates.join(', ')}`).join(' | '));
-      }
-
-      // ── 4. RESMİ TATİL / HAFTA SONU YÜKSEK TUTARLI ──────────
-      const tatilFisler=fisler.filter(f=>isTatil(f.tarih)&&f.satirlar.some(s=>s.tutar>50000));
-      if(tatilFisler.length>0){
-        const topTutar=tatilFisler.reduce((a,f)=>a+f.satirlar.reduce((b,s)=>b+s.tutar,0)/2,0);
-        push('Hafta Sonu/Tatil Yüksek Kayıt','orta','📅',`${tatilFisler.length} fiş hafta sonu/tatilde, toplam ~${fC(topTutar)}`,
-          tatilFisler.slice(0,4).map(f=>`Fiş#${f.fisNo} (${f.tarih})`).join(', '));
-      }
-
-      // ── 5. GERİYE TARİHLİ FİŞ (dönem bitişinden sonra) ──────
-      if(baslik.donemBit){
-        const donemBit=new Date(baslik.donemBit);
-        const geriTarihli=fisler.filter(f=>f.tarih&&new Date(f.tarih)>donemBit);
-        if(geriTarihli.length>0){
-          push('Dönem Dışı/Geriye Tarihli Kayıt','yuksek','📆',`${geriTarihli.length} fiş, defter dönem bitiş tarihi sonrasında`,
-            geriTarihli.slice(0,3).map(f=>`Fiş#${f.fisNo} tarih:${f.tarih} (dönem bitti:${baslik.donemBit})`).join(' | '));
-        }
-      }
-
-      // ── 6. KAPANMIŞ DÖNEME MÜDAHALE (iptal+yeni aynı anda) ──
-      const gecmisIptalDuzenle=fisler.filter(f=>{
-        const eski=f.satirlar.some(s=>s.belgeRef&&s.belgeRef!==s.belgeNo);
-        return eski&&(f.aciklama||'').match(/düzelt|duzelt|iptal|müdahale/i);
-      });
-      if(gecmisIptalDuzenle.length>0){
-        push('Önceki Döneme Müdahale İzi','yuksek','🔍',`${gecmisIptalDuzenle.length} fişte farklı dönem belge referansı + düzeltme`,
-          gecmisIptalDuzenle.slice(0,3).map(f=>`Fiş#${f.fisNo}`).join(', '));
-      }
-
-      // ── 7. AYNI GÜN TOPLU MANUEL DÜZELTME ───────────────────
-      const gunDuzeltme={};
-      fisler.filter(f=>(f.aciklama||'').match(/düzelt|duzelt|hata|iptal|değiş/i)).forEach(f=>{
-        if(!f.tarih)return;
-        gunDuzeltme[f.tarih]=(gunDuzeltme[f.tarih]||0)+1;
-      });
-      Object.entries(gunDuzeltme).forEach(([gun,sayi])=>{
-        if(sayi>=3)push('Toplu Manuel Düzeltme','orta','✏️',`${gun} tarihinde ${sayi} düzeltme/iptal fişi`,
-          'Aynı günde yoğun düzeltme aktivitesi dönem sonu manipülasyon riski taşır.');
-      });
-
-      // ── 8. OLAĞANDIŞI HESAP KOMBİNASYONLARI ─────────────────
-      const olagandisiKombo=[
-        {a:'100',b:['640','641','642','643','644','645','646','647','648','649','650','651','652','653','654','655','656','657','658','659','660','661'],acik:'Kasa ↔ Gider hesabı (ara hesap olmadan)'},
-        {a:'100',b:['600','601','602'],acik:'Kasa ↔ Satış hesabı doğrudan'},
-        {a:'690',b:['100','102'],acik:'Dönem K/Z ↔ Nakit (K/Z hesabı nakit etkilememeli)'},
-        {a:'570',b:['100','102'],acik:'Geçmiş Yıl Karı ↔ Nakit doğrudan'},
-      ];
-      const komboSayac=[];
-      olagandisiKombo.forEach(kural=>{
-        fisler.forEach(f=>{
-          const varA=f.satirlar.some(s=>s.hesapKod===kural.a);
-          const varB=f.satirlar.some(s=>kural.b.includes(s.hesapKod));
-          if(varA&&varB)komboSayac.push({fisNo:f.fisNo,acik:kural.acik});
-        });
-      });
-      if(komboSayac.length>0){
-        push('Olağandışı Hesap Kombinasyonu','orta','🔀',`${komboSayac.length} fişte alışılmadık hesap çifti`,
-          komboSayac.slice(0,4).map(k=>`Fiş#${k.fisNo}: ${k.acik}`).join(' | '));
-      }
-
-      // ── 9. NORMALDE KULLANILMAYAN HESAP AKTİFLEŞMESİ ────────
-      // Tüm hesap kodlarını say — tek kez geçen ve ana hesap olanlar şüpheli
-      const hesapFrekans={};
-      fisler.forEach(f=>f.satirlar.forEach(s=>{if(s.hesapKod){hesapFrekans[s.hesapKod]=(hesapFrekans[s.hesapKod]||0)+1;}}));
-      const tekSefer=Object.entries(hesapFrekans).filter(([k,v])=>v===1&&parseInt(k)>=100).map(([k])=>k);
-      if(tekSefer.length>3){
-        push('Nadir Kullanılan Hesap','bilgi','💤',`${tekSefer.length} hesap kod tüm dönemde yalnızca 1 kez kullanılmış`,
-          'Şüpheli: '+tekSefer.slice(0,8).join(', ')+' — kasıtlı tek seferlik kayıt olabilir.');
-      }
-
-      // ── 10. MUAVIN OLMADAN ANA HESAPTA YOĞUN HAREKET ────────
-      // Sadece ana hesap kodu olan (alt hesap boş) ve çok tekrar eden
-      const anaHesapYogun={};
-      fisler.forEach(f=>f.satirlar.forEach(s=>{
-        if(s.hesapKod&&!s.altHesap){
-          anaHesapYogun[s.hesapKod]=(anaHesapYogun[s.hesapKod]||0)+1;
-        }
-      }));
-      const muavinEksik=Object.entries(anaHesapYogun)
-        .filter(([k,v])=>v>=5&&['120','320','321','329','131','231'].includes(k))
-        .map(([k,v])=>({kod:k,sayi:v}));
-      if(muavinEksik.length>0){
-        push('Muavin Hesap Eksik','orta','📋',`${muavinEksik.length} kritik hesapta alt hesap kodu kullanılmamış`,
-          muavinEksik.map(x=>`${x.kod}: ${x.sayi} satır alt hesapsız`).join(', ')+' — müşteri/tedarikçi bazlı analiz yapılamaz.');
-      }
-
-      // ── 11. HESAP PLANI DIŞI / HATALI KODLAR ────────────────
-      const tuhafKodlar=Object.keys(hesapFrekans).filter(k=>{
-        if(!k||k.length<3)return false;
-        const kok=k.substring(0,3);
-        return !BILINEN_HESAPLAR.has(kok)&&parseInt(kok)>=100;
-      });
-      if(tuhafKodlar.length>0){
-        push('Hesap Planı Dışı Kod','orta','❌',`${tuhafKodlar.length} kayıtta THP dışında hesap kodu`,
-          tuhafKodlar.slice(0,8).join(', ')+' — GİB şematron hatası riski.');
-      }
-
-      // ── 12. AYNI AÇIKLAMA + FARKLI TUTAR SERİ KAYIT ────────
-      const aciklamaGruplari={};
-      fisler.forEach(f=>{
-        if(!f.aciklama||f.aciklama.length<5)return;
-        const key=f.aciklama.toUpperCase().trim();
-        if(!aciklamaGruplari[key])aciklamaGruplari[key]=[];
-        const tutar=f.satirlar.reduce((a,s)=>s.dc==='D'?a+s.tutar:a,0);
-        aciklamaGruplari[key].push({fisNo:f.fisNo,tutar});
-      });
-      Object.entries(aciklamaGruplari).forEach(([acik,fislr])=>{
-        if(fislr.length<3)return;
-        const tutarlar=fislr.map(x=>x.tutar);
-        const farkliTutar=new Set(tutarlar.filter(t=>t>0)).size>2;
-        if(farkliTutar){
-          push('Seri Kayıt Uyuşmazlığı','orta','🔢',`"${acik.substring(0,40)}" açıklaması ${fislr.length} fişte, farklı tutarlarla`,
-            fislr.slice(0,4).map(x=>`#${x.fisNo}:${fC(x.tutar)}`).join(', '));
-        }
-      });
-
-      // ── 13. ORTALAMA DIŞI EKSTREM KAYITLAR ──────────────────
-      const tutarListesi=fisler.map(f=>f.satirlar.reduce((a,s)=>s.dc==='D'?a+s.tutar:a,0)).filter(t=>t>0);
-      if(tutarListesi.length>3){
-        const ort=tutarListesi.reduce((a,b)=>a+b,0)/tutarListesi.length;
-        const std=Math.sqrt(tutarListesi.reduce((a,b)=>a+Math.pow(b-ort,2),0)/tutarListesi.length);
-        const ekstremler=fisler.filter(f=>{
-          const t=f.satirlar.reduce((a,s)=>s.dc==='D'?a+s.tutar:a,0);
-          return t>0&&Math.abs(t-ort)>3*std;
-        });
-        if(ekstremler.length>0){
-          push('Ekstrem Tutarlı Kayıt','orta','📈',`${ekstremler.length} fiş ortalama işlem büyüklüğünün 3σ üzerinde`,
-            `Ortalama: ${fC(ort)}, Std: ${fC(std)} — Şüpheli: `+ekstremler.slice(0,3).map(f=>`#${f.fisNo}:${fC(f.satirlar.reduce((a,s)=>s.dc==='D'?a+s.tutar:a,0))}`).join(', '));
-        }
-      }
-
-      // ── 14. PARÇALANMIŞ İŞLEMLER (limit altı bölünme) ───────
-      // Aynı gün aynı hesaba küçük tutarlı çok sayıda kayıt
-      const gunHesapGrup={};
-      fisler.forEach(f=>{
-        if(!f.tarih)return;
-        f.satirlar.forEach(s=>{
-          const key=`${f.tarih}|${s.hesapKod}|${s.dc}`;
-          if(!gunHesapGrup[key])gunHesapGrup[key]=[];
-          gunHesapGrup[key].push(s.tutar);
-        });
-      });
-      Object.entries(gunHesapGrup).forEach(([key,tutarlar])=>{
-        if(tutarlar.length<4)return;
-        const toplam=tutarlar.reduce((a,b)=>a+b,0);
-        const maks=Math.max(...tutarlar);
-        if(maks<10000&&toplam>30000){
-          const [gun,hesap,dc]=key.split('|');
-          push('Parçalanmış İşlem','orta','✂️',`${gun} tarihinde ${hesap} hesabına ${tutarlar.length} küçük kayıt (toplam ${fC(toplam)})`,
-            `Maksimum tek kayıt ${fC(maks)} — limit altı bölünme şüphesi.`);
-        }
-      });
-
-      // ── 15. KDV HESABI KONTROLÜ ──────────────────────────────
-      // 191 İndirilecek KDV, 391 Hesaplanan KDV
-      const kdv191=fisler.flatMap(f=>f.satirlar.filter(s=>s.hesapKod==='191'));
-      const kdv391=fisler.flatMap(f=>f.satirlar.filter(s=>s.hesapKod==='391'));
-
-      // KDV ters çalışma: 191 alacak, 391 borç olmamalı (çok istisnai)
-      const kdv191Alacak=kdv191.filter(s=>s.dc==='C');
-      const kdv391Borc=kdv391.filter(s=>s.dc==='D');
-      if(kdv191Alacak.length>2){
-        const top=kdv191Alacak.reduce((a,s)=>a+s.tutar,0);
-        push('KDV Hesabı Ters Çalışıyor','yuksek','⚡',`191 İndirilecek KDV ${kdv191Alacak.length} satırda alacak olarak çalışmış (${fC(top)})`,
-          '191 normalde borç tarafında çalışır. Alacak hareketi KDV iadesi veya hata olabilir.');
-      }
-      if(kdv391Borc.length>2){
-        const top=kdv391Borc.reduce((a,s)=>a+s.tutar,0);
-        push('KDV Hesabı Ters Çalışıyor','yuksek','⚡',`391 Hesaplanan KDV ${kdv391Borc.length} satırda borç olarak çalışmış (${fC(top)})`,
-          '391 normalde alacak tarafında çalışır. Borç hareketi KDV ödemesi veya hata olabilir.');
-      }
-
-      // KDV Matrah–KDV oranı uyumu
-      fisler.forEach(f=>{
-        const kdvSatir=f.satirlar.filter(s=>s.hesapKod==='391'||s.hesapKod==='191');
-        const matrahSatir=f.satirlar.filter(s=>['600','601','602','150','151','152'].includes(s.hesapKod));
-        if(kdvSatir.length===0||matrahSatir.length===0)return;
-        const kdvToplam=kdvSatir.reduce((a,s)=>a+s.tutar,0);
-        const matrahToplam=matrahSatir.reduce((a,s)=>a+s.tutar,0);
-        if(matrahToplam>1000&&kdvToplam>0){
-          const oran=kdvToplam/matrahToplam;
-          // Geçerli KDV oranları: %1, %10, %20
-          if(oran>0&&!(Math.abs(oran-0.01)<0.005||Math.abs(oran-0.10)<0.008||Math.abs(oran-0.20)<0.01)){
-            push('KDV Oran Uyumsuzluğu','orta','💰',`Fiş#${f.fisNo}: KDV/Matrah oranı %${(oran*100).toFixed(1)} (geçerli: %1, %10, %20)`,
-              `Matrah: ${fC(matrahToplam)}, KDV: ${fC(kdvToplam)}`);
-          }
-        }
-      });
-
-      // ── 16. STOPAJ KONTROLÜ ──────────────────────────────────
-      const stopajHesap=fisler.flatMap(f=>f.satirlar.filter(s=>s.hesapKod==='360'||s.hesapKod==='361'));
-      const stopajSadece=fisler.filter(f=>f.satirlar.some(s=>s.hesapKod==='360')&&!f.satirlar.some(s=>['730','740','750','760','770','780'].includes(s.hesapKod)));
-      if(stopajSadece.length>1){
-        push('Stopaj Tek Taraflı','orta','📋',`${stopajSadece.length} fişte 360 stopaj, bağlantılı gider hesabı yok`,
-          'Stopaj kaydının ilgili gider kalemiyle eşleşmesi beklenir.');
-      }
-
-      // ── 17. ERP ENTEGRASYON / MANUEL FİŞ AYRIŞMASI ──────────
-      const erpFisler=fisler.filter(f=>{
-        const src=(f.aciklama||'').toUpperCase();
-        return src.includes('ERP')||src.includes('ENTEGRASYON')||src.includes('OTOMATİK')||src.includes('SISTEM')||src.includes('API');
-      });
-      const manuelFisler=fisler.filter(f=>{
-        const src=(f.aciklama||'').toUpperCase();
-        return src.includes('MANUEL')||src.includes('EL İLE')||src.includes('DÜZELTMESİ');
-      });
-      // Aynı belge referansına hem ERP hem manuel kayıt
-      const erpBelgeler=new Set(erpFisler.flatMap(f=>f.satirlar.map(s=>s.belgeRef).filter(Boolean)));
-      const manuelBelgeler=new Set(manuelFisler.flatMap(f=>f.satirlar.map(s=>s.belgeRef).filter(Boolean)));
-      const ciftKayit=[...erpBelgeler].filter(b=>manuelBelgeler.has(b));
-      if(ciftKayit.length>0){
-        push('ERP+Manuel Çift Kayıt','yuksek','⚠️',`${ciftKayit.length} belge referansında hem ERP hem manuel kayıt`,
-          ciftKayit.slice(0,5).join(', ')+' — aynı işlem iki kez muhasebeleşmiş olabilir.');
-      }
-
-      // ── 18. VIRMAN YOĞUNLUĞU ─────────────────────────────────
-      const virmanFisler=fisler.filter(f=>{
-        const a=(f.aciklama||'').toUpperCase();
-        return a.includes('VİRMAN')||a.includes('VIRMAN')||a.includes('AKTARIM')||a.includes('TRANSFER');
-      });
-      if(virmanFisler.length>fisler.length*0.15&&virmanFisler.length>3){
-        push('Virman Yoğunluğu','orta','↔️',`Toplam fişlerin %${Math.round(virmanFisler.length/fisler.length*100)}'i virman/aktarım (${virmanFisler.length} fiş)`,
-          'Yüksek virman oranı gerçek işlem azlığını gizliyor olabilir.');
-      }
-
-      // ── 19. KAR/ZARAR HESABI KONTROLÜ ───────────────────────
-      const kzHesap=['690','691','692','693','694','695','696','697','698','699'];
-      const kzHareketler=fisler.filter(f=>f.satirlar.some(s=>kzHesap.includes(s.hesapKod)));
-      // K/Z hesabı dönem ortasında çalışmamalı (sadece kapanışta)
-      if(baslik.donemBit){
-        const donemBit=new Date(baslik.donemBit);
-        const ortadaKZ=kzHareketler.filter(f=>{
-          const d=new Date(f.tarih);
-          const fark=(donemBit-d)/(1000*60*60*24);
-          return fark>10; // dönem bitişinden 10 günden önce
-        });
-        if(ortadaKZ.length>0){
-          push('Dönem Ortasında K/Z Hareketi','orta','💸',`${ortadaKZ.length} fişte 690 grubu hesap dönem ortasında hareket etmiş`,
-            ortadaKZ.slice(0,3).map(f=>`Fiş#${f.fisNo} (${f.tarih})`).join(', ')+' — K/Z hesapları normalde yalnızca dönem kapanışında kullanılır.');
-        }
-      }
-
-      // ── 20. AMORTİSMAN KONTROLÜ ──────────────────────────────
-      const amorFisler=fisler.filter(f=>f.satirlar.some(s=>s.hesapKod==='257'||s.hesapKod==='268'||s.hesapKod==='278'));
-      // Amortisman her dönem benzer tutarda olmalı
-      const amorTutarlar=amorFisler.map(f=>f.satirlar.filter(s=>['257','268','278'].includes(s.hesapKod)).reduce((a,s)=>a+s.tutar,0));
-      if(amorTutarlar.length>0){
-        const amorOrt=amorTutarlar.reduce((a,b)=>a+b,0)/amorTutarlar.length;
-        const amorEkstrem=amorFisler.filter((_,i)=>Math.abs(amorTutarlar[i]-amorOrt)>amorOrt*0.5);
-        if(amorEkstrem.length>0&&amorFisler.length>1){
-          push('Amortisman Tutarsızlığı','orta','🏗️',`${amorEkstrem.length} amortisman fişi ortalama değerin %50 uzağında`,
-            `Ortalama: ${fC(amorOrt)} — Şüpheli: `+amorEkstrem.slice(0,3).map(f=>`Fiş#${f.fisNo}`).join(', '));
-        }
-      } else if(fisler.length>10){
-        push('Amortisman Fişi Yok','bilgi','🏗️','Dönemde amortisman kaydı (257/268/278) tespit edilmedi',
-          'Duran varlık varsa dönemlik amortisman ayrılması beklenir.');
-      }
-
-      // ── 21. BERAT HASH KONTROLÜ ──────────────────────────────
-      // XML içinde imza/hash alanı var mı kontrol et
-      const imzaAlanlari=doc.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#','Signature');
-      if(imzaAlanlari.length===0){
-        push('Berat/İmza Alanı Eksik','bilgi','🔐','XML dosyasında dijital imza (Signature) alanı bulunamadı',
-          'GİB onaylı e-Defterlerde XAdES-BES imzası bulunmalı. Test/örnek dosya ise bu normal.');
-      }
-
-      // ── 22. XML ŞEMA KONTROLÜ ────────────────────────────────
-      // Zorunlu alanlar var mı
-      const zorunluAlanlar=[
-        {tag:'entriesType',ns:'http://www.xbrl.org/int/gl/cor/2006-10-25',ad:'entriesType'},
-        {tag:'uniqueID',ns:'http://www.xbrl.org/int/gl/cor/2006-10-25',ad:'uniqueID'},
-        {tag:'periodCoveredStart',ns:'http://www.xbrl.org/int/gl/cor/2006-10-25',ad:'periodCoveredStart'},
-      ];
-      const eksikAlanlar=zorunluAlanlar.filter(z=>doc.getElementsByTagNameNS(z.ns,z.tag).length===0);
-      if(eksikAlanlar.length>0){
-        push('XML Şema Hatası','yuksek','🔴','Zorunlu XML alanları eksik: '+eksikAlanlar.map(z=>z.ad).join(', '),
-          'GİB şematron kontrolünden geçemez. Şema uyumsuzluğu.');
-      }
-
-      // ── 23. DEFTER PARÇA SIRALAMA ────────────────────────────
-      // Fiş numaraları sıralı olmalı
-      const fisNumaraları=fisler.map(f=>parseInt(f.fisNo||'0')).filter(n=>n>0);
-      let siralamamaHatasi=false;
-      for(let i=1;i<fisNumaraları.length;i++){
-        if(fisNumaraları[i]<fisNumaraları[i-1]){siralamamaHatasi=true;break;}
-      }
-      if(siralamamaHatasi){
-        push('Fiş Sıralama Hatası','orta','🔢','Fiş numaraları müteselsil sırada değil',
-          'GİB şematron müteselsil sıra kontrolü yapar. Sıra bozukluğu onay reddine yol açar.');
-      }
-
-      // ── 24. GECE YARISI / MESAİ DIŞI KRİTİK KAYIT ───────────
-      const geceFislerAll=fisler.filter(f=>isMesaiDisi(f.aciklama));
-      if(geceFislerAll.length>0){
-        const geceToplam=geceFislerAll.reduce((a,f)=>a+f.satirlar.filter(s=>s.dc==='D').reduce((b,s)=>b+s.tutar,0),0);
-        push('Mesai Dışı Kayıt','yuksek','🌙',`${geceFislerAll.length} fiş 22:00-06:00 arası (toplam ${fC(geceToplam)})`,
-          geceFislerAll.slice(0,4).map(f=>`Fiş#${f.fisNo}(${f.tarih})`).join(', '));
-      }
-
-      // ── 25. SİLİNEN/İPTAL YOĞUNLUĞU ────────────────────────
-      const iptalToplam=fisler.filter(f=>(f.aciklama||'').match(/iptal|iptali|silme|silinmiş|storno/i)).length;
-      if(iptalToplam>fisler.length*0.1&&iptalToplam>2){
-        push('Yüksek İptal Yoğunluğu','orta','🗑️',`Toplam fişlerin %${Math.round(iptalToplam/fisler.length*100)}'i iptal/silme (${iptalToplam}/${fisler.length})`,
-          'Yüksek iptal oranı kayıt kalitesi veya kasıtlı değişiklik riski.');
-      }
-
-      // ── 26. YUVARLAK TUTAR + BELGESİZ ───────────────────────
-      const yuvarlakFisler=[];
-      fisler.forEach(f=>f.satirlar.forEach(s=>{
-        if(s.tutar>0&&s.tutar%10000===0&&s.belgeTip==='other'){
-          yuvarlakFisler.push({fisNo:f.fisNo,tutar:s.tutar,tarih:f.tarih});
-        }
-      }));
-      if(yuvarlakFisler.length>0){
-        const topTutar=yuvarlakFisler.reduce((a,b)=>a+b.tutar,0);
-        push('Yuvarlak Tutar + Belgesiz','orta','🔢',`${yuvarlakFisler.length} satırda 10.000₺ katı belgesiz kayıt (toplam ${fC(topTutar)})`,
-          yuvarlakFisler.slice(0,3).map(x=>`Fiş#${x.fisNo}:${fC(x.tutar)}`).join(', '));
-      }
-
-      // ── 27. ORTAK CARİ (131/231) ─────────────────────────────
-      const ortakHes=fisler.flatMap(f=>f.satirlar.filter(s=>s.hesapKod==='131'||s.hesapKod==='231'));
-      if(ortakHes.length>0){
-        const toplamOrtak=ortakHes.filter(s=>s.dc==='D').reduce((a,b)=>a+b.tutar,0);
-        push('Ortaklar Cari Hareketi',toplamOrtak>100000?'yuksek':'orta','👤',
-          `131/231 hesabında ${ortakHes.length} kayıt, toplam borç: ${fC(toplamOrtak)}`,
-          'Banka perspektifinden özsermaye düşürücü etki. İskonto analizi önerilir.');
-      }
-
-      // ── 28. BELGE TİPİ UYUŞMAZLIĞI ──────────────────────────
-      const uyusmazFisler=fisler.filter(f=>{
-        const acikFat=f.aciklama&&(f.aciklama.includes('FAT')||f.aciklama.includes('FATURA'));
-        return acikFat&&f.satirlar.some(s=>s.belgeTip==='other');
-      });
-      if(uyusmazFisler.length>0){
-        push('Belge Tipi Uyuşmazlığı','orta','📄',`${uyusmazFisler.length} fişte açıklama "fatura" içeriyor ama documentType=other`,
-          uyusmazFisler.slice(0,3).map(f=>`Fiş#${f.fisNo}:${(f.aciklama||'').substring(0,40)}`).join(' | '));
-      }
-
-      // ── 29. DÖNEM SONU YOĞUNLAŞMASI ─────────────────────────
-      if(baslik.donemBit){
-        const donemBit=new Date(baslik.donemBit);
-        const son3Gun=fisler.filter(f=>{
-          if(!f.tarih)return false;
-          const d=new Date(f.tarih);
-          return (donemBit-d)/(1000*60*60*24)<=3;
-        });
-        if(son3Gun.length>fisler.length*0.25&&son3Gun.length>3){
-          push('Dönem Sonu Yoğunlaşması','bilgi','📅',`Fişlerin %${Math.round(son3Gun.length/fisler.length*100)}'i son 3 günde (${son3Gun.length}/${fisler.length})`,
-            'Dönem sonunda yoğun kayıt olağan olabilir ancak kontrol edilmesi önerilir.');
-        }
-      }
-
-      // ── 30. AYNI GÜN ÇOKLU İPTAL ────────────────────────────
-      const gunIptal={};
-      fisler.filter(f=>(f.aciklama||'').match(/iptal/i)).forEach(f=>{
-        if(f.tarih) gunIptal[f.tarih]=(gunIptal[f.tarih]||0)+1;
-      });
-      Object.entries(gunIptal).forEach(([gun,sayi])=>{
-        if(sayi>=2){
-          const eslesenFis=fisler.filter(g=>g.tarih===gun&&!(g.aciklama||'').match(/iptal/i));
-          push('Aynı Gün İptal Çifti','orta','↩️',`${gun} tarihinde ${sayi} iptal fişi`,
-            eslesenFis.length>0?`Orijinal fişler: `+eslesenFis.slice(0,3).map(f=>`#${f.fisNo}`).join(','):'Eşleşen kayıt bulunamadı');
-        }
-      });
-
-      resolve({
-        ok:true,
-        baslik,sirket,fisler,hesapOzet,anomaliler,
-        belgetipler,gunler,
-        ozet:{
-          toplamFis:fisler.length,
-          toplamSatir:fisler.reduce((a,b)=>a+b.satirlar.length,0),
-          toplamBorç,toplamAlacak,
-          donemBas:baslik.donemBas,
-          donemBit:baslik.donemBit,
-          anomaliSayisi:anomaliler.length
-        }
-      });
-    };
-    reader.onerror=()=>resolve({ok:false,err:'Dosya okunamadı'});
-    reader.readAsText(file,'UTF-8');
-  });
-}
-
-function rEDefter(el){
-  const ed=S.ed;
-  let h='<div style="display:flex;flex-direction:column;gap:14px">';
-
-  // ── Dosya yükleme alanı ──
-  h+=`<div class="card"><div class="card-h">
-    <div class="card-t">📋 e-Defter Analizi</div>
-    <div style="display:flex;gap:8px;align-items:center">
-      ${ed.dosyaAdi?`<span style="font-size:10px;color:var(--gn);font-family:'JetBrains Mono',monospace">✓ ${ed.dosyaAdi}</span>`:''}
-      ${ed.fisler&&ed.fisler.length&&S.user?`<button class="btn" onclick="saveEDefterAnaliz()" style="font-size:11px;padding:5px 12px">💾 Kaydet</button>`:''}
-    </div>
-  </div><div class="card-b">
-    <div class="uz" id="edUpZ" onclick="document.getElementById('edInp').click()" style="border-color:${ed.dosyaAdi?'var(--gn)':'var(--brd)'}">
-      <div class="uz-i">📋</div>
-      <div class="uz-t">${ed.dosyaAdi?'Yeni e-Defter yüklemek için tıklayın':'e-Defter XML dosyasını yükleyin'}</div>
-      <div class="uz-h">GİB onaylı Yevmiye Defteri (.xml) veya Paket (.zip)</div>
-      <div class="uz-h" style="margin-top:2px;color:var(--ac)">XBRL GL formatı · Fatura bazlı anomali tespiti · Hesap analizi</div>
-    </div>
-    <input type="file" id="edInp" accept=".xml,.zip" style="display:none" onchange="hEDefterFile(this.files[0])">
-    ${ed.log.length?`<div class="plog">${ed.log.map(l=>`<div class="${l.t}">${l.t==='ok'?'✓':l.t==='warn'?'⚠':l.t==='err'?'✗':'ℹ'} ${l.m}</div>`).join('')}</div>`:''}
-  </div></div>`;
-
-  // Veri yoksa bilgi kartı göster — fisler VEYA ozet verisi kontrol
-  const hasEDData=!!(ed.fisler?.length||ed.ozet?.toplamFis||ed.dosyaAdi);
-  if(!hasEDData){
-    h+=`<div class="card"><div class="card-b" style="text-align:center;padding:32px;color:var(--tm)">
-      <div style="font-size:28px;margin-bottom:12px">📋</div>
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px">e-Defter XML dosyası bekleniyor</div>
-      <div style="font-size:11px;line-height:1.7">GİB e-Defter portalından indirdiğiniz <b>Yevmiye Defteri</b> XML dosyasını yükleyin.<br>
-      Mizan'dan farklı olarak her fişi, belge tipini ve tarihi ayrı ayrı analiz eder.<br>
-      <span style="color:var(--ac)">Desteklenen: .xml (XBRL GL) · .zip (yevmiye+berat paketi)</span></div>
-    </div></div>`;
-    h+='</div>';el.innerHTML=h;
-    setTimeout(()=>{
-      const z=document.getElementById('edUpZ');if(!z)return;
-      z.ondragover=e=>{e.preventDefault();z.classList.add('dov')};
-      z.ondragleave=()=>z.classList.remove('dov');
-      z.ondrop=e=>{e.preventDefault();z.classList.remove('dov');if(e.dataTransfer.files[0])hEDefterFile(e.dataTransfer.files[0])};
-    },50);
-    return;
-  }
-
-  const oz=ed.ozet;
-
-  // ── Özet kartları ──
-  const riskRenk=oz.anomaliSayisi===0?'var(--gn)':oz.anomaliSayisi<=2?'var(--am)':'var(--rd)';
-  h+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-    <div style="background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:12px;text-align:center">
-      <div style="font-size:9px;color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Toplam Fiş</div>
-      <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace">${oz.toplamFis}</div>
-      <div style="font-size:9px;color:var(--tm)">${oz.toplamSatir} satır</div>
-    </div>
-    <div style="background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:12px;text-align:center">
-      <div style="font-size:9px;color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Toplam Borç</div>
-      <div style="font-size:16px;font-weight:700;color:var(--t1)">${fC(oz.toplamBorç)}</div>
-      <div style="font-size:9px;color:var(--tm)">Alacak: ${fC(oz.toplamAlacak)}</div>
-    </div>
-    <div style="background:var(--bgi);border:1px solid var(--brd);border-radius:7px;padding:12px;text-align:center">
-      <div style="font-size:9px;color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Dönem</div>
-      <div style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace">${oz.donemBas||'—'}</div>
-      <div style="font-size:9px;color:var(--tm)">${oz.donemBit||''}</div>
-    </div>
-    <div style="background:${oz.anomaliSayisi>0?'rgba(239,68,68,.06)':'rgba(34,197,94,.06)'};border:1px solid ${oz.anomaliSayisi>0?'rgba(239,68,68,.2)':'rgba(34,197,94,.2)'};border-radius:7px;padding:12px;text-align:center">
-      <div style="font-size:9px;color:var(--tm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Anomali</div>
-      <div style="font-size:22px;font-weight:700;color:${riskRenk}">${oz.anomaliSayisi}</div>
-      <div style="font-size:9px;color:${riskRenk}">${oz.anomaliSayisi===0?'Temiz':'Tespit Edildi'}</div>
-    </div>
-  </div>`;
-
-  // Şirket + defter bilgisi
-  if(ed.sirket&&ed.sirket.ad){
-    h+=`<div style="padding:10px 14px;background:var(--acd);border:1px solid rgba(59,130,246,.1);border-radius:8px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
-      <span style="color:var(--t2)">🏢 <b>${ed.sirket.ad}</b></span>
-      ${ed.sirket.vkn?`<span style="color:var(--tm)">VKN: <span style="font-family:'JetBrains Mono',monospace">${ed.sirket.vkn}</span></span>`:''}
-      ${ed.baslik&&ed.baslik.kaynak?`<span style="color:var(--tm)">Kaynak: ${ed.baslik.kaynak}</span>`:''}
-    </div>`;
-  }
-
-  // ── ANOMALİLER ──
-  if(ed.anomaliler&&ed.anomaliler.length){
-    h+=`<div class="card"><div class="card-h"><div class="card-t">⚠️ Tespit Edilen Anomaliler</div>
-      <span style="font-size:10px;color:var(--tm)">${ed.anomaliler.length} bulgu</span>
-    </div><div class="card-b" style="padding:10px;display:flex;flex-direction:column;gap:8px">`;
-    ed.anomaliler.forEach(a=>{
-      const ren=a.risk==='yuksek'?'rgba(239,68,68,.08)':a.risk==='orta'?'rgba(245,158,11,.06)':'var(--acd)';
-      const brd=a.risk==='yuksek'?'rgba(239,68,68,.2)':a.risk==='orta'?'rgba(245,158,11,.18)':'rgba(59,130,246,.15)';
-      const tc=a.risk==='yuksek'?'var(--rd)':a.risk==='orta'?'var(--am)':'var(--ac)';
-      h+=`<div style="background:${ren};border:1px solid ${brd};border-radius:8px;padding:12px 14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="font-size:14px">${a.emoji}</span>
-          <span style="font-size:12px;font-weight:600;color:${tc}">${a.kategori}</span>
-          <span style="margin-left:auto;font-size:9px;padding:2px 7px;border-radius:3px;background:${ren};color:${tc};border:1px solid ${brd};font-family:'JetBrains Mono',monospace;text-transform:uppercase">${a.risk==='yuksek'?'Yüksek':a.risk==='orta'?'Orta':'Bilgi'}</span>
-        </div>
-        <div style="font-size:12px;color:var(--t2);margin-bottom:3px">${a.aciklama}</div>
-        <div style="font-size:10px;color:var(--tm);font-family:'JetBrains Mono',monospace">${a.detay}</div>
-      </div>`;
-    });
-    h+=`</div></div>`;
-  } else if(ed.fisler.length>0){
-    h+=`<div style="padding:12px 16px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:12px;color:var(--gn)">✓ Anomali tespit edilmedi — defter temiz görünüyor</div>`;
-  }
-
-  // ── HESAP HAREKETLERİ ──
-  h+=`<div class="card"><div class="card-h"><div class="card-t">📊 Hesap Bazlı Hareketler</div>
-    <span style="font-size:10px;color:var(--tm)">Borç / Alacak / Bakiye</span>
-  </div><div class="card-b" style="padding:0;overflow:auto;max-height:320px">
-  <table class="ctb"><thead><tr>
-    <th>Hesap Kodu</th><th>Açıklama</th><th>Borç</th><th>Alacak</th><th>Bakiye</th><th>Fiş</th>
-  </tr></thead><tbody>`;
-  (ed.hesapOzet||[]).slice(0,30).forEach(h2=>{
-    const bkRenk=h2.bakiye>0?'var(--t2)':h2.bakiye<0?'var(--rd)':'var(--tm)';
-    h+=`<tr>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600">${h2.kod}</td>
-      <td style="font-size:11px;color:var(--tm)">${h2.ad||'—'}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right">${fC(h2.borç)}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right">${fC(h2.alacak)}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;color:${bkRenk};font-weight:600">${fC(Math.abs(h2.bakiye))} ${h2.bakiye>=0?'B':'A'}</td>
-      <td style="text-align:center;font-size:11px;color:var(--tm)">${h2.fisSayisi}</td>
-    </tr>`;
-  });
-  h+=`</tbody></table></div></div>`;
-
-  // ── FİŞ LİSTESİ ──
-  h+=`<div class="card"><div class="card-h"><div class="card-t">📑 Fiş Listesi</div>
-    <span style="font-size:10px;color:var(--tm)">${ed.fisler.length} yevmiye maddesi</span>
-  </div><div class="card-b" style="padding:0;overflow:auto;max-height:380px">
-  <table class="ctb"><thead><tr>
-    <th>#</th><th>Tarih</th><th>Açıklama</th><th>Satır</th><th>Durum</th>
-  </tr></thead><tbody>`;
-  ed.fisler.forEach(f=>{
-    const anomBu=ed.anomaliler&&ed.anomaliler.some(a=>a.detay&&a.detay.includes(`#${f.fisNo}`));
-    const mesaiRenk=f.mesaiDisi?'color:var(--am)':'';
-    h+=`<tr style="${anomBu?'background:rgba(239,68,68,.04)':''}" title="${f.aciklama}">
-      <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${f.fisNo}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;${mesaiRenk}">${f.tarih}${f.mesaiDisi?' 🌙':''}</td>
-      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.aciklama||'—'}</td>
-      <td style="text-align:center;font-size:11px;color:var(--tm)">${f.satirlar.length}</td>
-      <td style="text-align:center">${anomBu?'<span style="font-size:9px;color:var(--rd)">⚠ Anomali</span>':'<span style="font-size:9px;color:var(--tm)">—</span>'}</td>
-    </tr>`;
-  });
-  h+=`</tbody></table></div></div>`;
-
-  // ── AI YORUM BUTONU ──
-  h+=`<div class="card"><div class="card-h"><div class="card-t">🤖 AI Uzman Yorumu</div></div><div class="card-b">`;
-  if(ed.aiLd){
-    h+=`<div style="text-align:center;padding:20px;color:var(--tm);font-size:12px">⏳ Analiz yapılıyor...</div>`;
-  } else if(ed.aiYorum){
-    h+=`<div style="font-size:13px;line-height:1.75;white-space:pre-wrap;color:var(--t2)">${ed.aiYorum}</div>`;
-  } else {
-    h+=`<div style="font-size:12px;color:var(--tm);margin-bottom:12px">e-Defter verilerinizi sektör bağlamında yapay zeka ile analiz edin.</div>
-    <button class="btn" onclick="runEDefterAI()">🤖 e-Defter Analizi Oluştur</button>`;
-  }
-  h+=`</div></div>`;
-
-  h+='</div>';
-  el.innerHTML=h;
-
-  // Drag & drop
-  setTimeout(()=>{
-    const z=document.getElementById('edUpZ');if(!z)return;
-    z.ondragover=e=>{e.preventDefault();z.classList.add('dov')};
-    z.ondragleave=()=>z.classList.remove('dov');
-    z.ondrop=e=>{e.preventDefault();z.classList.remove('dov');if(e.dataTransfer.files[0])hEDefterFile(e.dataTransfer.files[0])};
-  },50);
-}
-
-async function hEDefterFile(file){
-  if(!file)return;
-  const ext=file.name.split('.').pop().toLowerCase();
-  S.ed.log=[{t:'info',m:`Dosya: ${file.name} (${(file.size/1024).toFixed(0)}KB)`}];
-  S.ed.dosyaAdi=file.name;
-  S.ed.rawFile=file; // kaydet için sakla
-  S.ed.fisler=[];S.ed.ozet={};S.ed.hesapOzet=[];S.ed.anomaliler=[];
-  S.ed.sirket={};S.ed.baslik={};
-  rEDefter(document.getElementById('cont'));
-
-  if(ext==='zip'){
-    // ZIP içinden XML çıkar
-    S.ed.log.push({t:'info',m:'ZIP paketi açılıyor...'});
-    try{
-      const JSZip=window.JSZip;
-      if(!JSZip){S.ed.log.push({t:'err',m:'ZIP desteği yüklü değil — XML dosyasını doğrudan yükleyin'});rEDefter(document.getElementById('cont'));return;}
-      const zip=await JSZip.loadAsync(file);
-      let xmlFile=null;
-      zip.forEach((path,f)=>{if(path.toLowerCase().endsWith('.xml')&&!path.toLowerCase().includes('berat'))xmlFile=f;});
-      if(!xmlFile){S.ed.log.push({t:'err',m:'ZIP içinde yevmiye XML bulunamadı'});rEDefter(document.getElementById('cont'));return;}
-      const xmlBlob=await xmlFile.async('blob');
-      const xmlFileObj=new File([xmlBlob],xmlFile.name,{type:'application/xml'});
-      await _parseAndShowEDefter(xmlFileObj);
-    }catch(e){S.ed.log.push({t:'err',m:'ZIP açma hatası: '+e.message});rEDefter(document.getElementById('cont'));}
-    return;
-  }
-
-  if(ext==='xml'){
-    await _parseAndShowEDefter(file);
-    return;
-  }
-
-  S.ed.log.push({t:'err',m:'Desteklenmeyen format. Lütfen .xml veya .zip yükleyin.'});
-  rEDefter(document.getElementById('cont'));
-}
-
-async function _parseAndShowEDefter(file){
-  S.ed.log.push({t:'info',m:'XML parse ediliyor...'});
-  rEDefter(document.getElementById('cont'));
-  const res=await parseEDefterXML(file);
-  if(!res.ok){
-    S.ed.log.push({t:'err',m:res.err||'Parse hatası'});
-    rEDefter(document.getElementById('cont'));
-    return;
-  }
-  S.ed.fisler=res.fisler;
-  S.ed.ozet=res.ozet;
-  S.ed.hesapOzet=res.hesapOzet;
-  S.ed.anomaliler=res.anomaliler;
-  S.ed.sirket=res.sirket;
-  S.ed.baslik=res.baslik;
-  S.ed.log.push({t:'ok',m:`${res.fisler.length} fiş, ${res.ozet.toplamSatir} satır okundu. ${res.anomaliler.length} anomali tespit edildi.`});
-  rEDefter(document.getElementById('cont'));
-}
-
-async function runEDefterAI(){
-  if(!S.ed.fisler||!S.ed.fisler.length)return;
-  S.ed.aiLd=true;S.ed.aiYorum='';
-  rEDefter(document.getElementById('cont'));
-  const oz=S.ed.ozet;
-  const anomTxt=S.ed.anomaliler.map(a=>`- ${a.kategori} (${a.risk}): ${a.aciklama}`).join('\n');
-  const hesapTxt=(S.ed.hesapOzet||[]).slice(0,15).map(h=>`${h.kod}: borç=${fC(h.borç)} alacak=${fC(h.alacak)} bakiye=${fC(h.bakiye)}`).join('\n');
-  const prompt=`e-Defter Yevmiye Analizi:\nŞirket: ${S.ed.sirket?.ad||'Bilinmiyor'}\nDönem: ${oz.donemBas} - ${oz.donemBit}\nToplam fiş: ${oz.toplamFis}, Satır: ${oz.toplamSatir}\nToplam borç: ${fC(oz.toplamBorç)}\n\nTespit edilen anomaliler:\n${anomTxt||'Anomali yok'}\n\nÖnemli hesap hareketleri:\n${hesapTxt}\n\nBu e-defter verilerini muhasebe uzmanı perspektifinden kısa analiz et. Anomalilerin olası nedenlerini ve muhasebe riski açısından değerlendirmesini yap. 200-250 kelime.`;
-  try{
-    const resp=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
-    const data=await resp.json();
-    S.ed.aiYorum=data.content?.[0]?.text||'Yanıt alınamadı';
-  }catch(e){S.ed.aiYorum='Hata: '+e.message;}
-  S.ed.aiLd=false;
-  rEDefter(document.getElementById('cont'));
-}
-
 
 // ─── CHECKLİST VERİ YAPISI ────────────────────────────────────────────────────
 const CL_LISTELER = {
@@ -2894,27 +2083,6 @@ function loadSaved(id){
   const item = S.savedList.find(x=>x.id===id);
   if(!item) return;
   const donemAdi = item.donem||item.sirket_adi||'Kayıtlı Analiz';
-
-  // e-Defter kaydı mı?
-  if(item.rasyo_json&&item.rasyo_json['__tip']==='edefter'){
-    try{
-      S.ed.dosyaAdi = item.dosya_adi||'e-Defter';
-      S.ed.aiYorum  = item.ai_yorum||'';
-      S.ed.anomaliler = JSON.parse(item.rasyo_json['__anomaliler']||'[]');
-      S.ed.hesapOzet  = JSON.parse(item.rasyo_json['__hesapOzet']||'[]');
-      S.ed.ozet = {
-        toplamFis:     item.rasyo_json['__fisler']||0,
-        toplamSatir:   item.rasyo_json['__satirlar']||0,
-        toplamBorç:    item.rasyo_json['__borc']||0,
-        toplamAlacak:  item.rasyo_json['__alacak']||0,
-        anomaliSayisi: item.rasyo_json['__anomali']||0,
-        donemBas:      item.rasyo_json['__donemBas']||'',
-        donemBit:      item.rasyo_json['__donemBit']||'',
-      };
-      S.ed.log = [{t:'ok',m:'📂 Kayıtlı e-Defter analizi yüklendi: '+donemAdi}];
-    }catch(e){console.warn('e-Defter yükleme hatası:',e);}
-    S.tab='edefter'; render(); return;
-  }
 
   // Normal analiz
   const mevcutDolu = S.periods[S.ap]&&Object.values(S.periods[S.ap].data).some(v=>v&&v!=='0');
